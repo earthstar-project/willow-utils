@@ -15,7 +15,7 @@ export type Record<PayloadDigest> = {
   /** 64 bit integer */
   length: bigint;
   /** digest-length bit integer*/
-  hash: PayloadDigest;
+  payloadDigest: PayloadDigest;
 };
 
 export type Entry<NamespaceKey, SubspaceKey, PayloadDigest> = {
