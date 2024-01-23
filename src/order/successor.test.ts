@@ -4,7 +4,7 @@ import { successorPath } from "./successor.ts";
 
 type Vector = [Uint8Array[], Uint8Array[] | null];
 
-const maxLength = 3;
+const maxPathLength = 3;
 const maxComponentCount = 3;
 const maxComponentLength = 2;
 
@@ -58,9 +58,7 @@ Deno.test("successorPath", () => {
     assertEquals(
       successorPath(
         original,
-        maxComponentCount,
-        maxComponentLength,
-        maxLength,
+        { maxComponentCount, maxComponentLength, maxPathLength },
       ),
       successor,
     );

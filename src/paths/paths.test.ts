@@ -30,14 +30,17 @@ const validPathVectors: ValidPathVector[] = [
 
 Deno.test("isValidPath", () => {
   for (
-    const [path, maxCompCount, maxCompLen, maxLen, result] of validPathVectors
+    const [path, maxComponentCount, maxComponentLength, maxPathLength, result]
+      of validPathVectors
   ) {
     assertEquals(
       isValidPath(
         path,
-        maxCompCount,
-        maxCompLen,
-        maxLen,
+        {
+          maxComponentCount,
+          maxComponentLength,
+          maxPathLength,
+        },
       ),
       result,
     );
@@ -186,7 +189,7 @@ const relativePathEncodingVectors: RelativePathEncodingVector[] = [
 Deno.test("relative encode/decode", () => {
   for (const [scheme, primary, reference] of relativePathEncodingVectors) {
     const encoded = encodePathRelative(scheme, primary, reference);
-    const decoded = decodePathRelative(scheme, primary, encoded);
-    assertEquals(decoded, reference);
+    const decoded = decodePathRelative(scheme, encoded, reference);
+    assertEquals(decoded, primary);
   }
 });

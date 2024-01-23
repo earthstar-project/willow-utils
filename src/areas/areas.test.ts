@@ -1,6 +1,5 @@
 import { assertEquals } from "$std/assert/assert_equals.ts";
-import { orderBytes, orderTimestamp } from "../order/order.ts";
-import { SuccessorFn } from "../order/types.ts";
+import { orderTimestamp } from "../order/order.ts";
 import { OPEN_END, Position3d, Range3d } from "../ranges/types.ts";
 import {
   areaIsIncluded,
@@ -478,15 +477,15 @@ Deno.test("encodeAreaInArea", () => {
           maxComponentLength: 255,
           maxPathLength: 255,
         },
-        subspaceScheme: {
+        subspaceIdEncodingScheme: {
           encode: (v: number) => new Uint8Array([v]),
           decode: (v: Uint8Array) => v[0],
           encodedLength: () => 1,
-          order: (a, b) => {
-            if (a < b) return -1;
-            else if (a > b) return 1;
-            return 0;
-          },
+        },
+        orderSubspace: (a, b) => {
+          if (a < b) return -1;
+          else if (a > b) return 1;
+          return 0;
         },
       },
       inner,
@@ -500,15 +499,10 @@ Deno.test("encodeAreaInArea", () => {
           maxComponentLength: 255,
           maxPathLength: 255,
         },
-        subspaceScheme: {
+        subspaceIdEncodingScheme: {
           encode: (v: number) => new Uint8Array([v]),
           decode: (v: Uint8Array) => v[0],
           encodedLength: () => 1,
-          order: (a, b) => {
-            if (a < b) return -1;
-            else if (a > b) return 1;
-            return 0;
-          },
         },
       },
       encoded,

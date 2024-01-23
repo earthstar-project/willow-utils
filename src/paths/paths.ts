@@ -4,10 +4,11 @@ import {
   encodeUintMax32,
   max32Width,
 } from "../encoding/encoding.ts";
-import { orderPathComponent } from "../order/order.ts";
+import { orderBytes } from "../order/order.ts";
 import { PathScheme } from "../parameters/types.ts";
 import { Path } from "./types.ts";
 
+/** Return the prefix shared by two `Path`s. */
 export function commonPrefix(a: Path, b: Path): Path {
   let longestPrefix = 0;
 
@@ -31,11 +32,10 @@ export function commonPrefix(a: Path, b: Path): Path {
   return a.slice(0, longestPrefix);
 }
 
+/** Returns whether a `Path` does not exceed the limits given by a `PathScheme`. */
 export function isValidPath(
   path: Path,
-  maxComponentCount: number,
-  maxComponentLength: number,
-  maxPathLength: number,
+  { maxComponentCount, maxComponentLength, maxPathLength }: PathScheme,
 ): boolean {
   if (path.length > maxComponentCount) {
     return false;
@@ -57,6 +57,7 @@ export function isValidPath(
   return true;
 }
 
+/** Returns whether a path is prefixed by another path. */
 export function isPathPrefixed(prefix: Path, path: Path): boolean {
   if (prefix.length > path.length) {
     return false;
@@ -66,7 +67,7 @@ export function isPathPrefixed(prefix: Path, path: Path): boolean {
     const prefixComponent = prefix[i];
     const testComponent = path[i];
 
-    const order = orderPathComponent(prefixComponent, testComponent);
+    const order = orderBytes(prefixComponent, testComponent);
 
     if (order !== 0) {
       return false;
@@ -76,6 +77,10 @@ export function isPathPrefixed(prefix: Path, path: Path): boolean {
   return true;
 }
 
+/** Encodes a path.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_path
+ */
 export function encodePath(pathScheme: PathScheme, path: Path): Uint8Array {
   const componentCountBytes = encodeUintMax32(
     path.length,
@@ -96,6 +101,10 @@ export function encodePath(pathScheme: PathScheme, path: Path): Uint8Array {
   return concat(componentCountBytes, ...componentBytes);
 }
 
+/** Decodes a path.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_path
+ */
 export function decodePath(pathScheme: PathScheme, encPath: Uint8Array): Path {
   const maxCountWidth = max32Width(pathScheme.maxComponentCount);
   const countBytes = encPath.subarray(0, maxCountWidth);
@@ -128,6 +137,7 @@ export function decodePath(pathScheme: PathScheme, encPath: Uint8Array): Path {
   return path;
 }
 
+/** Encodes the length of a `Path`. */
 export function encodedPathLength(pathScheme: PathScheme, path: Path): number {
   const countWidth = max32Width(pathScheme.maxComponentCount);
 
@@ -143,41 +153,53 @@ export function encodedPathLength(pathScheme: PathScheme, path: Path): number {
   return length;
 }
 
+/** Encodes a `Path` relative to another `Path`.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_path_relative
+ */
 export function encodePathRelative(
   scheme: PathScheme,
-  primary: Path,
+  /** The path which `primary` is being encoded relative to. */
+  toEncode: Path,
+  /** The path being encoded relative to `reference`. */
   reference: Path,
 ) {
-  const longestPrefixLength = commonPrefix(primary, reference).length;
+  const longestPrefixLength = commonPrefix(reference, toEncode).length;
 
   const prefixLengthBytes = encodeUintMax32(
     longestPrefixLength,
     scheme.maxComponentCount,
   );
 
-  const suffix = reference.slice(longestPrefixLength);
+  const suffix = toEncode.slice(longestPrefixLength);
 
   const suffixBytes = encodePath(scheme, suffix);
 
   return concat(prefixLengthBytes, suffixBytes);
 }
 
+/** Decodes a `Path` relative to another `Path`.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_path_relative
+ */
 export function decodePathRelative(
   scheme: PathScheme,
-  primary: Path,
-  encodedReference: Uint8Array,
+  /** The path which was encoded relative to `reference`. */
+  encodedRelativePath: Uint8Array,
+  /** The path which `encodedRelativePath` was encoded relative to. */
+  reference: Path,
 ): Path {
   const prefixLengthWidth = max32Width(scheme.maxComponentCount);
 
   const prefixLength = decodeUintMax32(
-    encodedReference.subarray(0, prefixLengthWidth),
+    encodedRelativePath.subarray(0, prefixLengthWidth),
   );
 
-  const prefix = primary.slice(0, prefixLength);
+  const prefix = reference.slice(0, prefixLength);
 
   const suffix = decodePath(
     scheme,
-    encodedReference.subarray(prefixLengthWidth),
+    encodedRelativePath.subarray(prefixLengthWidth),
   );
 
   return prefix.concat(suffix);

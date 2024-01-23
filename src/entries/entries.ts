@@ -5,16 +5,21 @@ import { decodePath, encodedPathLength, encodePath } from "../paths/paths.ts";
 import { Position3d } from "../ranges/types.ts";
 import { Entry } from "./types.ts";
 
+/** Returns the `Position3d` of an `Entry`. */
 export function entryPosition<NamespaceKey, SubspaceKey, PayloadDigest>(
   entry: Entry<NamespaceKey, SubspaceKey, PayloadDigest>,
 ): Position3d<SubspaceKey> {
   return {
-    path: entry.identifier.path,
-    subspace: entry.identifier.subspace,
-    time: entry.record.timestamp,
+    path: entry.path,
+    subspace: entry.subspaceId,
+    time: entry.timestamp,
   };
 }
 
+/** Encode an `Entry`.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_entry
+ */
 export function encodeEntry<NamespaceKey, SubspaceKey, PayloadDigest>(
   opts: {
     namespaceScheme: EncodingScheme<NamespaceKey>;
@@ -25,15 +30,19 @@ export function encodeEntry<NamespaceKey, SubspaceKey, PayloadDigest>(
   entry: Entry<NamespaceKey, SubspaceKey, PayloadDigest>,
 ): Uint8Array {
   return concat(
-    opts.namespaceScheme.encode(entry.identifier.namespace),
-    opts.subspaceScheme.encode(entry.identifier.subspace),
-    encodePath(opts.pathScheme, entry.identifier.path),
-    bigintToBytes(entry.record.timestamp),
-    bigintToBytes(entry.record.length),
-    opts.payloadScheme.encode(entry.record.payloadDigest),
+    opts.namespaceScheme.encode(entry.namespaceId),
+    opts.subspaceScheme.encode(entry.subspaceId),
+    encodePath(opts.pathScheme, entry.path),
+    bigintToBytes(entry.timestamp),
+    bigintToBytes(entry.payloadLength),
+    opts.payloadScheme.encode(entry.payloadDigest),
   );
 }
 
+/** Decode bytes to an `Entry`.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_entry
+ */
 export function decodeEntry<NamespaceKey, SubspaceKey, PayloadDigest>(
   opts: {
     namespaceScheme: EncodingScheme<NamespaceKey>;
@@ -47,36 +56,32 @@ export function decodeEntry<NamespaceKey, SubspaceKey, PayloadDigest>(
 
   const view = new DataView(encEntry.buffer);
 
-  const namespace = opts.namespaceScheme.decode(encEntry);
+  const namespaceId = opts.namespaceScheme.decode(encEntry);
 
-  const subspacePos = opts.namespaceScheme.encodedLength(namespace);
-  const subspace = opts.subspaceScheme.decode(encEntry.subarray(subspacePos));
+  const subspacePos = opts.namespaceScheme.encodedLength(namespaceId);
+  const subspaceId = opts.subspaceScheme.decode(encEntry.subarray(subspacePos));
 
-  const pathPos = subspacePos + opts.subspaceScheme.encodedLength(subspace);
+  const pathPos = subspacePos + opts.subspaceScheme.encodedLength(subspaceId);
 
   const path = decodePath(opts.pathScheme, encEntry.subarray(pathPos));
 
   const timestampPos = pathPos + encodedPathLength(opts.pathScheme, path);
   const timestamp = view.getBigUint64(timestampPos);
 
-  const lengthPos = timestampPos + 8;
-  const length = view.getBigUint64(lengthPos);
+  const payloadLengthPos = timestampPos + 8;
+  const payloadLength = view.getBigUint64(payloadLengthPos);
 
-  const payloadDigestPos = lengthPos + 8;
+  const payloadDigestPos = payloadLengthPos + 8;
   const payloadDigest = opts.payloadScheme.decode(
     encEntry.subarray(payloadDigestPos),
   );
 
   return {
-    identifier: {
-      namespace,
-      subspace,
-      path,
-    },
-    record: {
-      timestamp,
-      length,
-      payloadDigest,
-    },
+    namespaceId,
+    subspaceId,
+    path,
+    timestamp,
+    payloadLength,
+    payloadDigest,
   };
 }

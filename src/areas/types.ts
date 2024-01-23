@@ -2,7 +2,10 @@ import { Range } from "../ranges/types.ts";
 
 export const ANY_SUBSPACE = Symbol("ANY_SUBSPACE");
 
-/** A grouping of Entries. */
+/** A grouping of Entries.
+ *
+ * https://willowprotocol.org/specs/grouping-entries/index.html#areas
+ */
 export type Area<SubspaceType> = {
   /** To be included in this Area, an Entry’s timestamp must be included in the time_range. */
   timeRange: Range<bigint>;

@@ -29,20 +29,16 @@ export const testSchemePayload: EncodingScheme<ArrayBuffer> = {
 
 const entries: Entry<Uint8Array, Uint8Array, ArrayBuffer>[] = [
   {
-    identifier: {
-      namespace: crypto.getRandomValues(new Uint8Array(8)),
-      subspace: crypto.getRandomValues(new Uint8Array(16)),
-      path: [
-        crypto.getRandomValues(new Uint8Array(4)),
-        crypto.getRandomValues(new Uint8Array(4)),
-        crypto.getRandomValues(new Uint8Array(4)),
-      ],
-    },
-    record: {
-      length: BigInt(1024),
-      payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
-      timestamp: BigInt(1000),
-    },
+    namespaceId: crypto.getRandomValues(new Uint8Array(8)),
+    subspaceId: crypto.getRandomValues(new Uint8Array(16)),
+    path: [
+      crypto.getRandomValues(new Uint8Array(4)),
+      crypto.getRandomValues(new Uint8Array(4)),
+      crypto.getRandomValues(new Uint8Array(4)),
+    ],
+    payloadLength: BigInt(1024),
+    payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
+    timestamp: BigInt(1000),
   },
 ];
 

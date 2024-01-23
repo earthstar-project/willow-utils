@@ -34,6 +34,7 @@ export function isValidRange<ValueType>(
   return startEndOrder < 0;
 }
 
+/** Returns whether a `Value` is included by a given `Range`. */
 export function isIncludedRange<ValueType>(
   order: TotalOrder<ValueType>,
   range: Range<ValueType>,
@@ -50,7 +51,7 @@ export function isIncludedRange<ValueType>(
   return ltEnd;
 }
 
-/** Intersect two ranges */
+/** Returns the intersection of two ranges, of which there may be none. */
 export function intersectRange<ValueType>(
   order: TotalOrder<ValueType>,
   a: Range<ValueType>,
@@ -113,6 +114,7 @@ export function intersectRange<ValueType>(
   return null;
 }
 
+/** Returns whether a range is fully included by another range. */
 export function rangeIsIncluded<ValueType>(
   order: TotalOrder<ValueType>,
   parentRange: Range<ValueType>,
@@ -156,6 +158,7 @@ export function isValidRange3d<SubspaceType>(
   return true;
 }
 
+/** Returns whether a `Position3d` is included by a given `Range`. */
 export function isIncluded3d<SubspaceType>(
   orderSubspace: TotalOrder<SubspaceType>,
   range: Range3d<SubspaceType>,

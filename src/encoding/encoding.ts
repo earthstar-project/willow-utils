@@ -70,7 +70,10 @@ export function decodeUintMax32(bytes: Uint8Array) {
   return (a << 8) + b;
 }
 
-/** Returns the number of octets needed to store a number, along the lines of 8-bit, 16-bit, 32-bit, or 64-bit unsigned integers. */
+/** Returns the number of octets needed to store a number, along the lines of 8-bit, 16-bit, 32-bit, or 64-bit unsigned integers.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#compact_width
+ */
 export function compactWidth(num: number | bigint): 1 | 2 | 4 | 8 {
   if (num < 256) {
     return 1;
@@ -83,6 +86,10 @@ export function compactWidth(num: number | bigint): 1 | 2 | 4 | 8 {
   return 8;
 }
 
+/** Encodes an integer using the smallest number of bytes possible.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#compact_width
+ */
 export function encodeCompactWidth(num: number | bigint): Uint8Array {
   const width = compactWidth(num);
 
@@ -106,6 +113,7 @@ export function encodeCompactWidth(num: number | bigint): Uint8Array {
   return bytes;
 }
 
+/** Decode a variable width integer. */
 export function decodeCompactWidth(encoded: Uint8Array): number | bigint {
   const view = new DataView(encoded.buffer, encoded.byteOffset);
 

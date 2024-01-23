@@ -1,11 +1,11 @@
+import { PathScheme } from "../parameters/types.ts";
 import { isValidPath } from "../paths/paths.ts";
 import { Path } from "../paths/types.ts";
 
+/** Returns the successor to a path given a `Path` and `PathScheme`.  */
 export function successorPath(
   path: Path,
-  maxComponentCount: number,
-  maxComponentLength: number,
-  maxPathLength: number,
+  { maxComponentCount, maxComponentLength, maxPathLength }: PathScheme,
 ): Uint8Array[] | null {
   const workingPath = [...path];
 
@@ -14,9 +14,7 @@ export function successorPath(
 
     const isSimplestOptionValid = isValidPath(
       nextPath,
-      maxComponentCount,
-      maxComponentLength,
-      maxPathLength,
+      { maxComponentCount, maxComponentLength, maxPathLength },
     );
 
     if (isSimplestOptionValid) {
@@ -38,9 +36,7 @@ export function successorPath(
 
     const isSimplestOptionValid = isValidPath(
       simplestNextPath,
-      maxComponentCount,
-      maxComponentLength,
-      maxPathLength,
+      { maxComponentCount, maxComponentLength, maxPathLength },
     );
 
     if (isSimplestOptionValid) {

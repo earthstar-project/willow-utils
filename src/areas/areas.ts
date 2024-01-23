@@ -22,6 +22,7 @@ import {
 import { OPEN_END, Position3d, Range3d } from "../ranges/types.ts";
 import { ANY_SUBSPACE, Area } from "./types.ts";
 
+/** Return whether a subspace ID is included by an `Area`. */
 export function isSubspaceIncludedInArea<SubspaceType>(
   orderSubspace: TotalOrder<SubspaceType>,
   area: Area<SubspaceType>,
@@ -34,6 +35,7 @@ export function isSubspaceIncludedInArea<SubspaceType>(
   return orderSubspace(area.includedSubspaceId, subspace) === 0;
 }
 
+/** Return whether a 3d position is included by an `Area`. */
 export function isIncludedArea<SubspaceType>(
   orderSubspace: TotalOrder<SubspaceType>,
   area: Area<SubspaceType>,
@@ -56,9 +58,12 @@ export function isIncludedArea<SubspaceType>(
   return true;
 }
 
+/** Return whether an area is fully included by another area. */
 export function areaIsIncluded<SubspaceType>(
   orderSubspace: TotalOrder<SubspaceType>,
+  /** The area being tested for inclusion. */
   inner: Area<SubspaceType>,
+  /** The area which we are testing for inclusion within. */
   outer: Area<SubspaceType>,
 ): boolean {
   if (
@@ -87,6 +92,7 @@ export function areaIsIncluded<SubspaceType>(
   return true;
 }
 
+/** Return the intersection of two areas, for which there may be none. */
 export function intersectArea<SubspaceType>(
   orderSubspace: TotalOrder<SubspaceType>,
   a: Area<SubspaceType>,
@@ -132,6 +138,7 @@ export function intersectArea<SubspaceType>(
   };
 }
 
+/** Convert an `Area` to a `Range3d`. */
 export function areaTo3dRange<SubspaceType>(
   opts: {
     successorSubspace: SuccessorFn<SubspaceType>;
@@ -157,16 +164,20 @@ export function areaTo3dRange<SubspaceType>(
       start: area.pathPrefix,
       end: successorPath(
         area.pathPrefix,
-        opts.maxComponentCount,
-        opts.maxPathComponentLength,
-        opts.maxPathLength,
+        {
+          maxComponentCount: opts.maxComponentCount,
+          maxComponentLength: opts.maxPathComponentLength,
+          maxPathLength: opts.maxPathLength,
+        },
       ) || OPEN_END,
     },
   };
 }
 
-const REALLY_BIG_INT = BigInt(2 ** 1023);
+// The little things we need to do to get on with the TypeScript compiler.
+const REALLY_BIG_INT = BigInt(2 ** 64);
 
+/** `Math.min`, but for `BigInt`. */
 function bigIntMin(a: bigint, b: bigint) {
   if (a < b) {
     return a;
@@ -175,18 +186,22 @@ function bigIntMin(a: bigint, b: bigint) {
   return b;
 }
 
+/** Encode an `Area` relative to known outer `Area`.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_area_in_area
+ */
 export function encodeAreaInArea<SubspaceId>(
   opts: {
-    subspaceScheme: EncodingScheme<SubspaceId> & {
-      order: TotalOrder<SubspaceId>;
-    };
-
+    subspaceIdEncodingScheme: EncodingScheme<SubspaceId>;
+    orderSubspace: TotalOrder<SubspaceId>;
     pathScheme: PathScheme;
   },
+  /** The area to be encoded relative to `outer`. */
   inner: Area<SubspaceId>,
+  /** The area which includes `inner` and which will be used to decode this relative encoding. */
   outer: Area<SubspaceId>,
 ): Uint8Array {
-  if (!areaIsIncluded(opts.subspaceScheme.order, inner, outer)) {
+  if (!areaIsIncluded(opts.orderSubspace, inner, outer)) {
     throw new Error("Inner is not included by outer");
   }
 
@@ -217,7 +232,7 @@ export function encodeAreaInArea<SubspaceId>(
     outer.includedSubspaceId === ANY_SUBSPACE) ||
     (inner.includedSubspaceId !== ANY_SUBSPACE &&
       outer.includedSubspaceId !== ANY_SUBSPACE &&
-      (opts.subspaceScheme.order(
+      (opts.orderSubspace(
         inner.includedSubspaceId,
         outer.includedSubspaceId,
       ) === 0));
@@ -263,13 +278,15 @@ export function encodeAreaInArea<SubspaceId>(
 
   const relativePathBytes = encodePathRelative(
     opts.pathScheme,
-    outer.pathPrefix,
     inner.pathPrefix,
+    outer.pathPrefix,
   );
 
   const subspaceIdBytes = isSubspaceSame
     ? new Uint8Array()
-    : opts.subspaceScheme.encode(inner.includedSubspaceId as SubspaceId);
+    : opts.subspaceIdEncodingScheme.encode(
+      inner.includedSubspaceId as SubspaceId,
+    );
 
   return concat(
     flagByte,
@@ -280,18 +297,20 @@ export function encodeAreaInArea<SubspaceId>(
   );
 }
 
+/** Decode an `Area` relative to a known outer `Area`.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_area_in_area
+ */
 export function decodeAreaInArea<SubspaceId>(
   opts: {
-    subspaceScheme: EncodingScheme<SubspaceId> & {
-      order: TotalOrder<SubspaceId>;
-    };
-
+    subspaceIdEncodingScheme: EncodingScheme<SubspaceId>;
     pathScheme: PathScheme;
   },
+  /** The encoded inner area relative to the outer area. */
   encodedInner: Uint8Array,
+  /** The known area the inner area was encoded relative to. */
   outer: Area<SubspaceId>,
 ): Area<SubspaceId> {
-  // holy moly okay. let's do this.
   const flags = encodedInner[0];
 
   const hasOpenEnd = (flags & 0x80) === 0x80;
@@ -310,15 +329,15 @@ export function decodeAreaInArea<SubspaceId>(
 
     const path = decodePathRelative(
       opts.pathScheme,
-      outer.pathPrefix,
       encodedInner.subarray(pathPos),
+      outer.pathPrefix,
     );
 
     const subspacePos = pathPos +
       encodedPathRelativeLength(opts.pathScheme, outer.pathPrefix, path);
 
     const subspaceId = includeInnerSubspaceId
-      ? opts.subspaceScheme.decode(encodedInner.subarray(subspacePos))
+      ? opts.subspaceIdEncodingScheme.decode(encodedInner.subarray(subspacePos))
       : outer.includedSubspaceId;
 
     return {
@@ -346,15 +365,15 @@ export function decodeAreaInArea<SubspaceId>(
 
   const path = decodePathRelative(
     opts.pathScheme,
-    outer.pathPrefix,
     encodedInner.subarray(pathPos),
+    outer.pathPrefix,
   );
 
   const subspacePos = pathPos +
     encodedPathRelativeLength(opts.pathScheme, outer.pathPrefix, path);
 
   const subspaceId = includeInnerSubspaceId
-    ? opts.subspaceScheme.decode(encodedInner.subarray(subspacePos))
+    ? opts.subspaceIdEncodingScheme.decode(encodedInner.subarray(subspacePos))
     : outer.includedSubspaceId;
 
   const innerStart = addStartDiff
