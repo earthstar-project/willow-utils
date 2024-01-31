@@ -109,7 +109,10 @@ export function decodePath(pathScheme: PathScheme, encPath: Uint8Array): Path {
   const maxCountWidth = max32Width(pathScheme.maxComponentCount);
   const countBytes = encPath.subarray(0, maxCountWidth);
 
-  const componentCount = decodeUintMax32(countBytes);
+  const componentCount = decodeUintMax32(
+    countBytes,
+    pathScheme.maxComponentCount,
+  );
 
   let position = maxCountWidth;
 
@@ -123,7 +126,10 @@ export function decodePath(pathScheme: PathScheme, encPath: Uint8Array): Path {
       position + componentLengthWidth,
     );
 
-    const componentLength = decodeUintMax32(lengthBytes);
+    const componentLength = decodeUintMax32(
+      lengthBytes,
+      pathScheme.maxComponentLength,
+    );
     const pathComponent = encPath.subarray(
       position + componentLengthWidth,
       position + componentLengthWidth + componentLength,
@@ -193,6 +199,7 @@ export function decodePathRelative(
 
   const prefixLength = decodeUintMax32(
     encodedRelativePath.subarray(0, prefixLengthWidth),
+    scheme.maxPathLength,
   );
 
   const prefix = reference.slice(0, prefixLength);

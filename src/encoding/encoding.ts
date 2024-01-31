@@ -48,18 +48,20 @@ export function encodeUintMax32(num: number, max: number): Uint8Array {
 }
 
 /** Decodes an UintMax unsigned integer,  */
-export function decodeUintMax32(bytes: Uint8Array) {
-  if (bytes.byteLength > 4) {
+export function decodeUintMax32(bytes: Uint8Array, max: number) {
+  const bytesToDecodeLength = max32Width(max);
+
+  if (bytesToDecodeLength > 4) {
     throw new Error("Cannot decode non-UintMax bytes");
   }
 
   const view = new DataView(bytes.buffer, bytes.byteOffset);
 
-  if (bytes.byteLength === 1) {
+  if (bytesToDecodeLength === 1) {
     return view.getUint8(0);
-  } else if (bytes.byteLength === 2) {
+  } else if (bytesToDecodeLength === 2) {
     return view.getUint16(0);
-  } else if (bytes.byteLength === 4) {
+  } else if (bytesToDecodeLength === 4) {
     return view.getUint32(0);
   }
 
