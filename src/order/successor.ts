@@ -6,9 +6,7 @@ import { Path } from "../paths/types.ts";
 export function successorPath(
   path: Path,
   { maxComponentCount, maxComponentLength, maxPathLength }: PathScheme,
-): Uint8Array[] | null {
-  const workingPath = [...path];
-
+): Path | null {
   if (path.length === 0) {
     const nextPath = [new Uint8Array(1)];
 
@@ -23,6 +21,8 @@ export function successorPath(
 
     return null;
   }
+
+  const workingPath = [...path];
 
   for (let i = path.length - 1; i >= 0; i--) {
     // Does the simplest thing work?
@@ -45,7 +45,7 @@ export function successorPath(
 
     // Otherwise...
 
-    const incrementedComponent = incrementFixed(component);
+    const incrementedComponent = successorBytesFixedWidth(component);
 
     if (incrementedComponent) {
       const nextPath = [...path.slice(0, i)];
@@ -70,7 +70,48 @@ export function successorPath(
   return workingPath;
 }
 
-function incrementFixed(bytes: Uint8Array): Uint8Array | null {
+/** Return a successor to a prefix, that is, the next element that is not a prefix of the given path. */
+export function successorPrefix(
+  path: Path,
+): Path | null {
+  if (path.length === 0) {
+    return null;
+  }
+
+  const workingPath = [...path];
+
+  for (let i = path.length - 1; i >= 0; i--) {
+    // Does the simplest thing work?
+
+    const component = workingPath[i];
+
+    const incrementedComponent = successorBytesFixedWidth(component);
+
+    if (incrementedComponent) {
+      const nextPath = [...path.slice(0, i)];
+      nextPath[i] = incrementedComponent;
+
+      return nextPath;
+    }
+
+    // Otherwise (there was an overflow)...
+
+    if (path.length === 0) {
+      return null;
+    }
+
+    workingPath.pop();
+  }
+
+  if (workingPath.length === 0) {
+    return null;
+  }
+
+  return workingPath;
+}
+
+/** Return the succeeding bytestring of the given bytestring without increasing that bytestring's length.  */
+export function successorBytesFixedWidth(bytes: Uint8Array): Uint8Array | null {
   const newBytes = new Uint8Array(bytes);
 
   let didIncrement = false;
