@@ -22,5 +22,5 @@ export type AreaOfInterest<SubspaceType> = {
   /** To be included in this AreaOfInterest, an Entry’s timestamp must be among the max_count greatest Timestamps, unless max_count is zero. */
   maxCount: number;
   /** The total payload_lengths of all included Entries is at most max_size, unless max_size is zero. */
-  maxSize: number;
+  maxSize: bigint;
 };
