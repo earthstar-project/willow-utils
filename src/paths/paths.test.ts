@@ -8,8 +8,30 @@ import {
   encodePathRelative,
   isPathPrefixed,
   isValidPath,
+  prefixesOf,
 } from "./paths.ts";
 import { Path } from "./types.ts";
+
+type PrefixesOfVector = [Path, Path[]];
+
+const prefixesOfVectors: PrefixesOfVector[] = [
+  [[], [[]]],
+  [[new Uint8Array(2)], [[], [new Uint8Array(2)]]],
+  [[new Uint8Array(2), new Uint8Array(3), new Uint8Array(4)], [
+    [],
+    [new Uint8Array(2)],
+    [new Uint8Array(2), new Uint8Array(3)],
+    [new Uint8Array(2), new Uint8Array(3), new Uint8Array(4)],
+  ]],
+];
+
+Deno.test("prefixesOf", () => {
+  for (const [path, expected] of prefixesOfVectors) {
+    const actual = prefixesOf(path);
+
+    assertEquals(actual, expected);
+  }
+});
 
 type ValidPathVector = [Path, number, number, number, boolean];
 

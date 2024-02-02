@@ -8,6 +8,16 @@ import { orderBytes } from "../order/order.ts";
 import { PathScheme } from "../parameters/types.ts";
 import { Path } from "./types.ts";
 
+export function prefixesOf(path: Path): Path[] {
+  const prefixes: Path[] = [[]];
+
+  for (let i = 1; i <= path.length; i++) {
+    prefixes.push(path.slice(0, i));
+  }
+
+  return prefixes;
+}
+
 /** Return the prefix shared by two `Path`s. */
 export function commonPrefix(a: Path, b: Path): Path {
   let longestPrefix = 0;
