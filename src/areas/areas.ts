@@ -22,6 +22,30 @@ import {
 import { OPEN_END, Position3d, Range3d } from "../ranges/types.ts";
 import { ANY_SUBSPACE, Area } from "./types.ts";
 
+export function fullArea<SubspaceId>(): Area<SubspaceId> {
+  return {
+    includedSubspaceId: ANY_SUBSPACE,
+    pathPrefix: [],
+    timeRange: {
+      start: BigInt(0),
+      end: OPEN_END,
+    },
+  };
+}
+
+export function subspaceArea<SubspaceId>(
+  subspaceId: SubspaceId,
+): Area<SubspaceId> {
+  return {
+    includedSubspaceId: subspaceId,
+    pathPrefix: [],
+    timeRange: {
+      start: BigInt(0),
+      end: OPEN_END,
+    },
+  };
+}
+
 /** Return whether a subspace ID is included by an `Area`. */
 export function isSubspaceIncludedInArea<SubspaceType>(
   orderSubspace: TotalOrder<SubspaceType>,
