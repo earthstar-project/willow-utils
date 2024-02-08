@@ -56,10 +56,6 @@ export function successorPath(
 
     // Otherwise (there was an overflow)...
 
-    if (path.length === 0) {
-      return null;
-    }
-
     workingPath.pop();
   }
 
@@ -96,8 +92,11 @@ export function successorPrefix(
 
     // Otherwise (there was an overflow)...
 
-    if (path.length === 0) {
-      return null;
+    if (component.byteLength === 0) {
+      const nextPath = [...path.slice(0, i)];
+      nextPath[i] = new Uint8Array([0]);
+
+      return nextPath;
     }
 
     workingPath.pop();

@@ -69,6 +69,14 @@ const testVectorsSuccessorPrefix: VectorSuccessorPrefix[] = [
     null,
   ],
   [
+    [new Uint8Array()],
+    [new Uint8Array([0])],
+  ],
+  [
+    [new Uint8Array([1]), new Uint8Array([])],
+    [new Uint8Array([1]), new Uint8Array([0])],
+  ],
+  [
     [new Uint8Array([0])],
     [new Uint8Array([1])],
   ],
