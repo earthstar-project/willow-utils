@@ -1,6 +1,7 @@
 import { concat } from "../../deps.ts";
 import { bigintToBytes } from "../encoding/encoding.ts";
-import { EncodingScheme, PathScheme } from "../parameters/types.ts";
+import { EncodingScheme } from "../encoding/types.ts";
+import { PathScheme } from "../parameters/types.ts";
 import { decodePath, encodedPathLength, encodePath } from "../paths/paths.ts";
 import { Position3d } from "../ranges/types.ts";
 import { Entry } from "./types.ts";

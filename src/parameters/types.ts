@@ -1,14 +1,5 @@
+import { EncodingScheme } from "../encoding/types.ts";
 import { TotalOrder } from "../order/types.ts";
-
-/** A scheme for encoding and decoding a given kind of `ValueType`. */
-export type EncodingScheme<ValueType> = {
-  /** A function to encode a given `ValueType`. */
-  encode(value: ValueType): Uint8Array;
-  /** A function to decode a given `ValueType` */
-  decode(encoded: Uint8Array): ValueType;
-  /** A function which returns the bytelength for a given `ValueType` when encoded. */
-  encodedLength(value: ValueType): number;
-};
 
 /** A scheme for encoding public keys and the signatures they produce. */
 export type KeypairEncodingScheme<PublicKey, Signature> = {

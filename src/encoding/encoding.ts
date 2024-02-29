@@ -81,7 +81,7 @@ export function compactWidth(num: number | bigint): 1 | 2 | 4 | 8 {
     return 1;
   } else if (num < 65536) {
     return 2;
-  } else if (num < 4294967296) {
+  } else if (num < 2147483648) {
     return 4;
   }
 
@@ -115,7 +115,7 @@ export function encodeCompactWidth(num: number | bigint): Uint8Array {
   return bytes;
 }
 
-/** Decode a variable width integer. */
+/** Decode a variable width integer. Uses the bytelength of the passed encoding to determine the compact width. */
 export function decodeCompactWidth(encoded: Uint8Array): number | bigint {
   const view = new DataView(encoded.buffer, encoded.byteOffset);
 

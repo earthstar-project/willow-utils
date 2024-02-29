@@ -1,5 +1,6 @@
 import { assertEquals } from "$std/assert/assert_equals.ts";
-import { EncodingScheme } from "../parameters/types.ts";
+import { EncodingScheme } from "../encoding/types.ts";
+
 import { decodeEntry, encodeEntry } from "./entries.ts";
 import { Entry } from "./types.ts";
 
@@ -7,12 +8,16 @@ export const testSchemeNamespace: EncodingScheme<Uint8Array> = {
   encode: (v: Uint8Array) => v,
   decode: (v: Uint8Array) => v.subarray(0, 8),
   encodedLength: () => 8,
+  // Not used here.
+  decodeStream: () => Promise.resolve(new Uint8Array()),
 };
 
 export const testSchemeSubspace: EncodingScheme<Uint8Array> = {
   encode: (v: Uint8Array) => v,
   decode: (v: Uint8Array) => v.subarray(0, 16),
   encodedLength: () => 16,
+  // Not used here.
+  decodeStream: () => Promise.resolve(new Uint8Array()),
 };
 
 export const testSchemePayload: EncodingScheme<ArrayBuffer> = {
@@ -25,6 +30,8 @@ export const testSchemePayload: EncodingScheme<ArrayBuffer> = {
   encodedLength() {
     return 32;
   },
+  // Not used here.
+  decodeStream: () => Promise.resolve(new Uint8Array().buffer),
 };
 
 const entries: Entry<Uint8Array, Uint8Array, ArrayBuffer>[] = [

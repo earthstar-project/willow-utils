@@ -1,4 +1,5 @@
 import { concat, equalsBytes } from "../../deps.ts";
+import { GrowingBytes } from "../../mod.ts";
 import {
   decodeUintMax32,
   encodeUintMax32,
@@ -8,6 +9,7 @@ import { orderBytes } from "../order/order.ts";
 import { PathScheme } from "../parameters/types.ts";
 import { Path } from "./types.ts";
 
+/** Return all prefixes of a given path (which included the path itself), in order of path length. */
 export function prefixesOf(path: Path): Path[] {
   const prefixes: Path[] = [[]];
 
@@ -148,6 +150,59 @@ export function decodePath(pathScheme: PathScheme, encPath: Uint8Array): Path {
     path.push(pathComponent);
 
     position += componentLengthWidth + componentLength;
+  }
+
+  return path;
+}
+
+/** Decodes an encoded path (which is streaming in).
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_path
+ */
+export async function decodeStreamPath(
+  pathScheme: PathScheme,
+  bytes: GrowingBytes,
+): Promise<Path> {
+  const maxCountWidth = max32Width(pathScheme.maxComponentCount);
+
+  await bytes.nextAbsolute(maxCountWidth);
+
+  const countBytes = bytes.array.subarray(0, maxCountWidth);
+
+  const componentCount = decodeUintMax32(
+    countBytes,
+    pathScheme.maxComponentCount,
+  );
+
+  bytes.prune(maxCountWidth);
+
+  const componentLengthWidth = max32Width(pathScheme.maxComponentLength);
+
+  const path: Path = [];
+
+  for (let i = 0; i < componentCount; i++) {
+    await bytes.nextAbsolute(componentLengthWidth);
+
+    const lengthBytes = bytes.array.subarray(
+      0,
+      componentLengthWidth,
+    );
+
+    const componentLength = decodeUintMax32(
+      lengthBytes,
+      pathScheme.maxComponentLength,
+    );
+
+    await bytes.nextAbsolute(componentLengthWidth + componentLength);
+
+    const pathComponent = bytes.array.subarray(
+      componentLengthWidth,
+      componentLengthWidth + componentLength,
+    );
+
+    path.push(pathComponent);
+
+    bytes.prune(componentLengthWidth + componentLength);
   }
 
   return path;

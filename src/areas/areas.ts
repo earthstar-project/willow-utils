@@ -4,10 +4,11 @@ import {
   decodeCompactWidth,
   encodeCompactWidth,
 } from "../encoding/encoding.ts";
+import { EncodingScheme } from "../encoding/types.ts";
 import { orderTimestamp } from "../order/order.ts";
 import { successorPath } from "../order/successor.ts";
 import { SuccessorFn, TotalOrder } from "../order/types.ts";
-import { EncodingScheme, PathScheme } from "../parameters/types.ts";
+import { PathScheme } from "../parameters/types.ts";
 import {
   decodePathRelative,
   encodedPathRelativeLength,

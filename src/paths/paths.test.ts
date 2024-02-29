@@ -1,8 +1,11 @@
 import { assertEquals } from "$std/assert/mod.ts";
+import FIFO from "https://deno.land/x/fifo@v0.2.2/mod.ts";
+import { GrowingBytes } from "../../mod.ts";
 import { PathScheme } from "../parameters/types.ts";
 import {
   decodePath,
   decodePathRelative,
+  decodeStreamPath,
   encodedPathLength,
   encodePath,
   encodePathRelative,
@@ -11,6 +14,7 @@ import {
   prefixesOf,
 } from "./paths.ts";
 import { Path } from "./types.ts";
+import { delay } from "https://deno.land/std@0.202.0/async/delay.ts";
 
 type PrefixesOfVector = [Path, Path[]];
 
@@ -144,6 +148,30 @@ Deno.test("encode / decode", () => {
     assertEquals(encoded.byteLength, predictedLength);
 
     const decoded = decodePath(scheme, encoded);
+
+    assertEquals(
+      path,
+      decoded,
+    );
+  }
+});
+
+Deno.test("decode (streaming)", async () => {
+  for (const [scheme, path] of pathEncodingVectors) {
+    const encoded = encodePath(scheme, path);
+
+    const stream = new FIFO<Uint8Array>();
+
+    const bytes = new GrowingBytes(stream);
+
+    (async () => {
+      for (const byte of encoded) {
+        stream.push(new Uint8Array([byte]));
+        await delay(0);
+      }
+    })();
+
+    const decoded = await decodeStreamPath(scheme, bytes);
 
     assertEquals(
       path,

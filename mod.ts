@@ -1,7 +1,9 @@
 export * from "./src/areas/types.ts";
 export * from "./src/areas/areas.ts";
 
+export * from "./src/encoding/types.ts";
 export * from "./src/encoding/encoding.ts";
+export * from "./src/encoding/growing_bytes.ts";
 
 export * from "./src/entries/types.ts";
 export * from "./src/entries/entries.ts";

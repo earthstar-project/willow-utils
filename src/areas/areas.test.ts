@@ -481,6 +481,8 @@ Deno.test("encodeAreaInArea", () => {
           encode: (v: number) => new Uint8Array([v]),
           decode: (v: Uint8Array) => v[0],
           encodedLength: () => 1,
+          // Not used here.
+          decodeStream: () => Promise.resolve(0),
         },
         orderSubspace: (a, b) => {
           if (a < b) return -1;
@@ -503,6 +505,8 @@ Deno.test("encodeAreaInArea", () => {
           encode: (v: number) => new Uint8Array([v]),
           decode: (v: Uint8Array) => v[0],
           encodedLength: () => 1,
+          // Not used here.
+          decodeStream: () => Promise.resolve(0),
         },
       },
       encoded,
