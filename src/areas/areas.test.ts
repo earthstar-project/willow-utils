@@ -1,10 +1,14 @@
 import { assertEquals } from "$std/assert/assert_equals.ts";
+import { delay } from "https://deno.land/std@0.202.0/async/delay.ts";
+import FIFO from "https://deno.land/x/fifo@v0.2.2/mod.ts";
+import { GrowingBytes } from "../encoding/growing_bytes.ts";
 import { orderTimestamp } from "../order/order.ts";
 import { OPEN_END, Position3d, Range3d } from "../ranges/types.ts";
 import {
   areaIsIncluded,
   areaTo3dRange,
   decodeAreaInArea,
+  decodeStreamAreaInArea,
   encodeAreaInArea,
   intersectArea,
   isIncludedArea,
@@ -514,5 +518,73 @@ Deno.test("encodeAreaInArea", () => {
     );
 
     assertEquals(inner, decoded);
+  }
+});
+
+Deno.test("encodeAreaInArea (streaming)", async () => {
+  for (const [inner, outer] of areaInAreaVectors) {
+    const encoded = encodeAreaInArea(
+      {
+        pathScheme: {
+          maxComponentCount: 255,
+          maxComponentLength: 255,
+          maxPathLength: 255,
+        },
+        subspaceIdEncodingScheme: {
+          encode: (v: number) => new Uint8Array([v]),
+          decode: (v: Uint8Array) => v[0],
+          encodedLength: () => 1,
+          decodeStream: async (bytes) => {
+            await bytes.nextAbsolute(1);
+            const id = bytes.array[0];
+            bytes.prune(1);
+            return id;
+          },
+        },
+        orderSubspace: (a, b) => {
+          if (a < b) return -1;
+          else if (a > b) return 1;
+          return 0;
+        },
+      },
+      inner,
+      outer,
+    );
+
+    const stream = new FIFO<Uint8Array>();
+
+    const bytes = new GrowingBytes(stream);
+
+    (async () => {
+      for (const byte of encoded) {
+        stream.push(new Uint8Array([byte]));
+        await delay(0);
+      }
+    })();
+
+    const decoded = await decodeStreamAreaInArea(
+      {
+        pathScheme: {
+          maxComponentCount: 255,
+          maxComponentLength: 255,
+          maxPathLength: 255,
+        },
+        subspaceIdEncodingScheme: {
+          encode: (v: number) => new Uint8Array([v]),
+          decode: (v: Uint8Array) => v[0],
+          encodedLength: () => 1,
+          decodeStream: async (bytes) => {
+            await bytes.nextAbsolute(1);
+            const id = bytes.array[0];
+            bytes.prune(1);
+            return id;
+          },
+        },
+      },
+      bytes,
+      outer,
+    );
+
+    assertEquals(decoded, inner);
   }
 });

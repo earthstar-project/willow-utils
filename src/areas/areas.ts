@@ -4,6 +4,7 @@ import {
   decodeCompactWidth,
   encodeCompactWidth,
 } from "../encoding/encoding.ts";
+import { GrowingBytes } from "../encoding/growing_bytes.ts";
 import { EncodingScheme } from "../encoding/types.ts";
 import { orderTimestamp } from "../order/order.ts";
 import { successorPath } from "../order/successor.ts";
@@ -11,6 +12,8 @@ import { SuccessorFn, TotalOrder } from "../order/types.ts";
 import { PathScheme } from "../parameters/types.ts";
 import {
   decodePathRelative,
+  decodeStreamPath,
+  decodeStreamPathRelative,
   encodedPathRelativeLength,
   encodePathRelative,
   isPathPrefixed,
@@ -399,6 +402,100 @@ export function decodeAreaInArea<SubspaceId>(
 
   const subspaceId = includeInnerSubspaceId
     ? opts.subspaceIdEncodingScheme.decode(encodedInner.subarray(subspacePos))
+    : outer.includedSubspaceId;
+
+  const innerStart = addStartDiff
+    ? outer.timeRange.start + startDiff
+    : outer.timeRange.start - startDiff;
+
+  return {
+    pathPrefix: path,
+    includedSubspaceId: subspaceId,
+    timeRange: {
+      start: innerStart,
+      end: addEndDiff
+        ? innerStart + endDiff
+        : outer.timeRange.end as bigint - endDiff,
+    },
+  };
+}
+
+export async function decodeStreamAreaInArea<SubspaceId>(
+  opts: {
+    pathScheme: PathScheme;
+    subspaceIdEncodingScheme: EncodingScheme<SubspaceId>;
+  },
+  bytes: GrowingBytes,
+  outer: Area<SubspaceId>,
+): Promise<Area<SubspaceId>> {
+  await bytes.nextAbsolute(1);
+
+  const flags = bytes.array[0];
+
+  const hasOpenEnd = (flags & 0x80) === 0x80;
+  const includeInnerSubspaceId = (flags & 0x40) === 0x40;
+  const addStartDiff = (flags & 0x20) === 0x20;
+  const addEndDiff = (flags & 0x10) === 0x10;
+  const startDiffWidth = 2 ** ((0xc & flags) >> 2);
+  const endDiffWidth = 2 ** (0x3 & flags);
+
+  bytes.prune(1);
+
+  if (hasOpenEnd) {
+    await bytes.nextAbsolute(startDiffWidth);
+
+    const startDiff = BigInt(decodeCompactWidth(
+      bytes.array.subarray(0, startDiffWidth),
+    ));
+
+    bytes.prune(startDiffWidth);
+
+    const path = await decodeStreamPathRelative(
+      opts.pathScheme,
+      bytes,
+      outer.pathPrefix,
+    );
+
+    const subspaceId = includeInnerSubspaceId
+      ? await opts.subspaceIdEncodingScheme.decodeStream(bytes)
+      : outer.includedSubspaceId;
+
+    return {
+      pathPrefix: path,
+      includedSubspaceId: subspaceId,
+      timeRange: {
+        start: addStartDiff
+          ? outer.timeRange.start + startDiff
+          : outer.timeRange.start - startDiff,
+        end: OPEN_END,
+      },
+    };
+  }
+
+  await bytes.nextAbsolute(startDiffWidth);
+
+  const startDiff = BigInt(decodeCompactWidth(
+    bytes.array.subarray(0, startDiffWidth),
+  ));
+
+  bytes.prune(startDiffWidth);
+
+  await bytes.nextAbsolute(endDiffWidth);
+
+  const endDiff = BigInt(decodeCompactWidth(
+    bytes.array.subarray(0, endDiffWidth),
+  ));
+
+  bytes.prune(endDiffWidth);
+
+  const path = await decodeStreamPathRelative(
+    opts.pathScheme,
+    bytes,
+    outer.pathPrefix,
+  );
+
+  const subspaceId = includeInnerSubspaceId
+    ? await opts.subspaceIdEncodingScheme.decodeStream(bytes)
     : outer.includedSubspaceId;
 
   const innerStart = addStartDiff
