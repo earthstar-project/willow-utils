@@ -36,9 +36,7 @@ export type PathScheme = {
 };
 
 /** A scheme for ordering, signing with and encoding Subspaces.  */
-export type SubspaceScheme<SubspaceId, SubspaceSecret, SubspaceSignature> =
-  & KeypairScheme<SubspaceId, SubspaceSecret, SubspaceSignature>
-  & {
-    /** A total order over all values in the set `SubspaceId`. */
-    order: TotalOrder<SubspaceId>;
-  };
+export type SubspaceScheme<SubspaceId> = {
+  /** A total order over all values in the set `SubspaceId`. */
+  order: TotalOrder<SubspaceId>;
+};
