@@ -1,6 +1,6 @@
 import { assertEquals } from "$std/assert/mod.ts";
 import FIFO from "https://deno.land/x/fifo@v0.2.2/mod.ts";
-import { GrowingBytes } from "../../mod.ts";
+import { decodeStreamPathRelative, GrowingBytes } from "../../mod.ts";
 import { PathScheme } from "../parameters/types.ts";
 import {
   decodePath,
@@ -241,5 +241,29 @@ Deno.test("relative encode/decode", () => {
     const encoded = encodePathRelative(scheme, primary, reference);
     const decoded = decodePathRelative(scheme, encoded, reference);
     assertEquals(decoded, primary);
+  }
+});
+
+Deno.test("relative decode (streaming)", async () => {
+  for (const [scheme, primary, reference] of relativePathEncodingVectors) {
+    const encoded = encodePathRelative(scheme, primary, reference);
+
+    const stream = new FIFO<Uint8Array>();
+
+    const bytes = new GrowingBytes(stream);
+
+    (async () => {
+      for (const byte of encoded) {
+        stream.push(new Uint8Array([byte]));
+        await delay(0);
+      }
+    })();
+
+    const decoded = await decodeStreamPathRelative(scheme, bytes, reference);
+
+    assertEquals(
+      decoded,
+      primary,
+    );
   }
 });

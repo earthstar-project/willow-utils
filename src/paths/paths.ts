@@ -277,6 +277,31 @@ export function decodePathRelative(
   return prefix.concat(suffix);
 }
 
+export async function decodeStreamPathRelative(
+  scheme: PathScheme,
+  /** The path which was encoded relative to `reference`. */
+  bytes: GrowingBytes,
+  /** The path which `encodedRelativePath` was encoded relative to. */
+  reference: Path,
+): Promise<Path> {
+  const prefixLengthWidth = max32Width(scheme.maxComponentCount);
+
+  await bytes.nextAbsolute(prefixLengthWidth);
+
+  const prefixLength = decodeUintMax32(
+    bytes.array.subarray(0, prefixLengthWidth),
+    scheme.maxPathLength,
+  );
+
+  const prefix = reference.slice(0, prefixLength);
+
+  bytes.prune(prefixLengthWidth);
+
+  const suffix = await decodeStreamPath(scheme, bytes);
+
+  return prefix.concat(suffix);
+}
+
 export function encodedPathRelativeLength(
   scheme: PathScheme,
   primary: Path,
