@@ -470,6 +470,24 @@ const areaInAreaVectors: AreaInAreaVector[] = [
       },
     },
   ],
+  [
+    {
+      pathPrefix: [new Uint8Array(13)],
+      includedSubspaceId: 1,
+      timeRange: {
+        start: BigInt(7),
+        end: BigInt(13),
+      },
+    },
+    {
+      pathPrefix: [new Uint8Array(13)],
+      includedSubspaceId: 1,
+      timeRange: {
+        start: BigInt(2),
+        end: BigInt(17),
+      },
+    },
+  ],
 ];
 
 Deno.test("encodeAreaInArea", () => {
@@ -481,13 +499,7 @@ Deno.test("encodeAreaInArea", () => {
           maxComponentLength: 255,
           maxPathLength: 255,
         },
-        subspaceIdEncodingScheme: {
-          encode: (v: number) => new Uint8Array([v]),
-          decode: (v: Uint8Array) => v[0],
-          encodedLength: () => 1,
-          // Not used here.
-          decodeStream: () => Promise.resolve(0),
-        },
+        encodeSubspace: (v: number) => new Uint8Array([v]),
         orderSubspace: (a, b) => {
           if (a < b) return -1;
           else if (a > b) return 1;
@@ -505,13 +517,7 @@ Deno.test("encodeAreaInArea", () => {
           maxComponentLength: 255,
           maxPathLength: 255,
         },
-        subspaceIdEncodingScheme: {
-          encode: (v: number) => new Uint8Array([v]),
-          decode: (v: Uint8Array) => v[0],
-          encodedLength: () => 1,
-          // Not used here.
-          decodeStream: () => Promise.resolve(0),
-        },
+        decodeSubspaceId: (v: Uint8Array) => v[0],
       },
       encoded,
       outer,
@@ -530,17 +536,7 @@ Deno.test("encodeAreaInArea (streaming)", async () => {
           maxComponentLength: 255,
           maxPathLength: 255,
         },
-        subspaceIdEncodingScheme: {
-          encode: (v: number) => new Uint8Array([v]),
-          decode: (v: Uint8Array) => v[0],
-          encodedLength: () => 1,
-          decodeStream: async (bytes) => {
-            await bytes.nextAbsolute(1);
-            const id = bytes.array[0];
-            bytes.prune(1);
-            return id;
-          },
-        },
+        encodeSubspace: (v: number) => new Uint8Array([v]),
         orderSubspace: (a, b) => {
           if (a < b) return -1;
           else if (a > b) return 1;
@@ -569,16 +565,11 @@ Deno.test("encodeAreaInArea (streaming)", async () => {
           maxComponentLength: 255,
           maxPathLength: 255,
         },
-        subspaceIdEncodingScheme: {
-          encode: (v: number) => new Uint8Array([v]),
-          decode: (v: Uint8Array) => v[0],
-          encodedLength: () => 1,
-          decodeStream: async (bytes) => {
-            await bytes.nextAbsolute(1);
-            const id = bytes.array[0];
-            bytes.prune(1);
-            return id;
-          },
+        decodeStreamSubspace: async (bytes) => {
+          await bytes.nextAbsolute(1);
+          const id = bytes.array[0];
+          bytes.prune(1);
+          return id;
         },
       },
       bytes,

@@ -220,7 +220,7 @@ function bigIntMin(a: bigint, b: bigint) {
  */
 export function encodeAreaInArea<SubspaceId>(
   opts: {
-    subspaceIdEncodingScheme: EncodingScheme<SubspaceId>;
+    encodeSubspace: (subspace: SubspaceId) => Uint8Array;
     orderSubspace: TotalOrder<SubspaceId>;
     pathScheme: PathScheme;
   },
@@ -252,10 +252,6 @@ export function encodeAreaInArea<SubspaceId>(
 
   let flags = 0x0;
 
-  if (inner.timeRange.end === OPEN_END) {
-    flags |= 0x80;
-  }
-
   const isSubspaceSame = (inner.includedSubspaceId === ANY_SUBSPACE &&
     outer.includedSubspaceId === ANY_SUBSPACE) ||
     (inner.includedSubspaceId !== ANY_SUBSPACE &&
@@ -266,6 +262,10 @@ export function encodeAreaInArea<SubspaceId>(
       ) === 0));
 
   if (!isSubspaceSame) {
+    flags |= 0x80;
+  }
+
+  if (inner.timeRange.end === OPEN_END) {
     flags |= 0x40;
   }
 
@@ -312,7 +312,7 @@ export function encodeAreaInArea<SubspaceId>(
 
   const subspaceIdBytes = isSubspaceSame
     ? new Uint8Array()
-    : opts.subspaceIdEncodingScheme.encode(
+    : opts.encodeSubspace(
       inner.includedSubspaceId as SubspaceId,
     );
 
@@ -331,7 +331,7 @@ export function encodeAreaInArea<SubspaceId>(
  */
 export function decodeAreaInArea<SubspaceId>(
   opts: {
-    subspaceIdEncodingScheme: EncodingScheme<SubspaceId>;
+    decodeSubspaceId: EncodingScheme<SubspaceId>["decode"];
     pathScheme: PathScheme;
   },
   /** The encoded inner area relative to the outer area. */
@@ -341,11 +341,11 @@ export function decodeAreaInArea<SubspaceId>(
 ): Area<SubspaceId> {
   const flags = encodedInner[0];
 
-  const hasOpenEnd = (flags & 0x80) === 0x80;
-  const includeInnerSubspaceId = (flags & 0x40) === 0x40;
+  const includeInnerSubspaceId = (flags & 0x80) === 0x80;
+  const hasOpenEnd = (flags & 0x40) === 0x40;
   const addStartDiff = (flags & 0x20) === 0x20;
   const addEndDiff = (flags & 0x10) === 0x10;
-  const startDiffWidth = 2 ** ((0xc & flags) >> 2);
+  const startDiffWidth = 2 ** (0x3 & (flags >> 2));
   const endDiffWidth = 2 ** (0x3 & flags);
 
   if (hasOpenEnd) {
@@ -365,7 +365,7 @@ export function decodeAreaInArea<SubspaceId>(
       encodedPathRelativeLength(opts.pathScheme, outer.pathPrefix, path);
 
     const subspaceId = includeInnerSubspaceId
-      ? opts.subspaceIdEncodingScheme.decode(encodedInner.subarray(subspacePos))
+      ? opts.decodeSubspaceId(encodedInner.subarray(subspacePos))
       : outer.includedSubspaceId;
 
     return {
@@ -401,7 +401,7 @@ export function decodeAreaInArea<SubspaceId>(
     encodedPathRelativeLength(opts.pathScheme, outer.pathPrefix, path);
 
   const subspaceId = includeInnerSubspaceId
-    ? opts.subspaceIdEncodingScheme.decode(encodedInner.subarray(subspacePos))
+    ? opts.decodeSubspaceId(encodedInner.subarray(subspacePos))
     : outer.includedSubspaceId;
 
   const innerStart = addStartDiff
@@ -423,7 +423,7 @@ export function decodeAreaInArea<SubspaceId>(
 export async function decodeStreamAreaInArea<SubspaceId>(
   opts: {
     pathScheme: PathScheme;
-    subspaceIdEncodingScheme: EncodingScheme<SubspaceId>;
+    decodeStreamSubspace: EncodingScheme<SubspaceId>["decodeStream"];
   },
   bytes: GrowingBytes,
   outer: Area<SubspaceId>,
@@ -432,11 +432,11 @@ export async function decodeStreamAreaInArea<SubspaceId>(
 
   const flags = bytes.array[0];
 
-  const hasOpenEnd = (flags & 0x80) === 0x80;
-  const includeInnerSubspaceId = (flags & 0x40) === 0x40;
+  const includeInnerSubspaceId = (flags & 0x80) === 0x80;
+  const hasOpenEnd = (flags & 0x40) === 0x40;
   const addStartDiff = (flags & 0x20) === 0x20;
   const addEndDiff = (flags & 0x10) === 0x10;
-  const startDiffWidth = 2 ** ((0xc & flags) >> 2);
+  const startDiffWidth = 2 ** (0x3 & (flags >> 2));
   const endDiffWidth = 2 ** (0x3 & flags);
 
   bytes.prune(1);
@@ -457,7 +457,7 @@ export async function decodeStreamAreaInArea<SubspaceId>(
     );
 
     const subspaceId = includeInnerSubspaceId
-      ? await opts.subspaceIdEncodingScheme.decodeStream(bytes)
+      ? await opts.decodeStreamSubspace(bytes)
       : outer.includedSubspaceId;
 
     return {
@@ -495,7 +495,7 @@ export async function decodeStreamAreaInArea<SubspaceId>(
   );
 
   const subspaceId = includeInnerSubspaceId
-    ? await opts.subspaceIdEncodingScheme.decodeStream(bytes)
+    ? await opts.decodeStreamSubspace(bytes)
     : outer.includedSubspaceId;
 
   const innerStart = addStartDiff
