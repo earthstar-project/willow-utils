@@ -1,5 +1,4 @@
 import { EncodingScheme } from "../encoding/types.ts";
-import { TotalOrder } from "../order/types.ts";
 
 /** A scheme for encoding public keys and the signatures they produce. */
 export type KeypairEncodingScheme<PublicKey, Signature> = {
@@ -21,8 +20,8 @@ export type SignatureScheme<PublicKey, SecretKey, Signature> = {
 
 /** A scheme for signing with a keypair, and encoding the associated public keys and signatures. */
 export type KeypairScheme<PublicKey, SecretKey, Signature> = {
-  signatureScheme: SignatureScheme<PublicKey, SecretKey, Signature>;
-  encodingScheme: KeypairEncodingScheme<PublicKey, Signature>;
+  signatures: SignatureScheme<PublicKey, SecretKey, Signature>;
+  encodings: KeypairEncodingScheme<PublicKey, Signature>;
 };
 
 /** A set of limits for `Path`s. */
@@ -33,10 +32,4 @@ export type PathScheme = {
   maxComponentLength: number;
   /** The maximum total length of bytes in a `Path`. */
   maxPathLength: number;
-};
-
-/** A scheme for ordering, signing with and encoding Subspaces.  */
-export type SubspaceScheme<SubspaceId> = {
-  /** A total order over all values in the set `SubspaceId`. */
-  order: TotalOrder<SubspaceId>;
 };
