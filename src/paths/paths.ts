@@ -235,7 +235,7 @@ export function encodePathRelative(
   /** The path being encoded relative to `reference`. */
   reference: Path,
 ) {
-  const longestPrefixLength = commonPrefix(reference, toEncode).length;
+  const longestPrefixLength = commonPrefix(toEncode, reference).length;
 
   const prefixLengthBytes = encodeUintMax32(
     longestPrefixLength,
@@ -264,7 +264,7 @@ export function decodePathRelative(
 
   const prefixLength = decodeUintMax32(
     encodedRelativePath.subarray(0, prefixLengthWidth),
-    scheme.maxPathLength,
+    scheme.maxComponentCount,
   );
 
   const prefix = reference.slice(0, prefixLength);
@@ -307,11 +307,11 @@ export function encodedPathRelativeLength(
   primary: Path,
   reference: Path,
 ) {
-  const longestPrefixLength = commonPrefix(primary, reference).length;
+  const longestPrefixLength = commonPrefix(reference, primary).length;
 
   const prefixLengthLength = max32Width(scheme.maxComponentCount);
 
-  const suffix = reference.slice(longestPrefixLength);
+  const suffix = primary.slice(longestPrefixLength);
 
   const suffixLength = encodedPathLength(scheme, suffix);
 
