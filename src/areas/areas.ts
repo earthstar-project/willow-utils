@@ -7,7 +7,7 @@ import {
 import { GrowingBytes } from "../encoding/growing_bytes.ts";
 import { EncodingScheme } from "../encoding/types.ts";
 import { orderTimestamp } from "../order/order.ts";
-import { successorPath } from "../order/successor.ts";
+import { successorPrefix } from "../order/successor.ts";
 import { SuccessorFn, TotalOrder } from "../order/types.ts";
 import { PathScheme } from "../parameters/types.ts";
 import {
@@ -190,13 +190,8 @@ export function areaTo3dRange<SubspaceType>(
       },
     pathRange: {
       start: area.pathPrefix,
-      end: successorPath(
+      end: successorPrefix(
         area.pathPrefix,
-        {
-          maxComponentCount: opts.maxComponentCount,
-          maxComponentLength: opts.maxPathComponentLength,
-          maxPathLength: opts.maxPathLength,
-        },
       ) || OPEN_END,
     },
   };
@@ -325,6 +320,59 @@ export function encodeAreaInArea<SubspaceId>(
   );
 }
 
+export function encodeAreaInAreaLength<SubspaceId>(
+  opts: {
+    encodeSubspaceIdLength: (subspace: SubspaceId) => number;
+    orderSubspace: TotalOrder<SubspaceId>;
+    pathScheme: PathScheme;
+  },
+  inner: Area<SubspaceId>,
+  outer: Area<SubspaceId>,
+) {
+  const isSubspaceSame = (inner.includedSubspaceId === ANY_SUBSPACE &&
+    outer.includedSubspaceId === ANY_SUBSPACE) ||
+    (inner.includedSubspaceId !== ANY_SUBSPACE &&
+      outer.includedSubspaceId !== ANY_SUBSPACE &&
+      (opts.orderSubspace(
+        inner.includedSubspaceId,
+        outer.includedSubspaceId,
+      ) === 0));
+
+  const subspaceLen = isSubspaceSame
+    ? 0
+    : opts.encodeSubspaceIdLength(inner.includedSubspaceId as SubspaceId);
+
+  const pathLen = encodedPathRelativeLength(
+    opts.pathScheme,
+    inner.pathPrefix,
+    outer.pathPrefix,
+  );
+
+  const innerEnd = inner.timeRange.end === OPEN_END
+    ? REALLY_BIG_INT
+    : inner.timeRange.end;
+  const outerEnd = outer.timeRange.end === OPEN_END
+    ? REALLY_BIG_INT
+    : outer.timeRange.end;
+
+  const startDiff = bigIntMin(
+    inner.timeRange.start - outer.timeRange.start,
+    outerEnd - inner.timeRange.start,
+  );
+
+  const endDiff = bigIntMin(
+    innerEnd - inner.timeRange.start,
+    outerEnd - innerEnd,
+  );
+
+  const startDiffLen = compactWidth(startDiff);
+  const endDiffLen = inner.timeRange.end === OPEN_END
+    ? 0
+    : compactWidth(endDiff);
+
+  return 1 + subspaceLen + pathLen + startDiffLen + endDiffLen;
+}
+
 /** Decode an `Area` relative to a known outer `Area`.
  *
  * https://willowprotocol.org/specs/encodings/index.html#enc_area_in_area
@@ -362,7 +410,7 @@ export function decodeAreaInArea<SubspaceId>(
     );
 
     const subspacePos = pathPos +
-      encodedPathRelativeLength(opts.pathScheme, outer.pathPrefix, path);
+      encodedPathRelativeLength(opts.pathScheme, path, outer.pathPrefix);
 
     const subspaceId = includeInnerSubspaceId
       ? opts.decodeSubspaceId(encodedInner.subarray(subspacePos))
@@ -398,7 +446,7 @@ export function decodeAreaInArea<SubspaceId>(
   );
 
   const subspacePos = pathPos +
-    encodedPathRelativeLength(opts.pathScheme, outer.pathPrefix, path);
+    encodedPathRelativeLength(opts.pathScheme, path, outer.pathPrefix);
 
   const subspaceId = includeInnerSubspaceId
     ? opts.decodeSubspaceId(encodedInner.subarray(subspacePos))
