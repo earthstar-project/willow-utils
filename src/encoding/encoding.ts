@@ -1,6 +1,6 @@
 export function bigintToBytes(bigint: bigint): Uint8Array {
   const bytes = new Uint8Array(8);
-  const view = new DataView(bytes.buffer);
+  const view = new DataView(bytes.buffer, bytes.byteOffset);
 
   view.setBigUint64(0, bigint);
 
@@ -25,7 +25,7 @@ export function encodeUintMax32(num: number, max: number): Uint8Array {
   const width = max32Width(max);
 
   const bytes = new Uint8Array(width);
-  const view = new DataView(bytes.buffer);
+  const view = new DataView(bytes.buffer, bytes.byteOffset);
 
   switch (width) {
     case 1:
@@ -96,7 +96,7 @@ export function encodeCompactWidth(num: number | bigint): Uint8Array {
   const width = compactWidth(num);
 
   const bytes = new Uint8Array(width);
-  const view = new DataView(bytes.buffer);
+  const view = new DataView(bytes.buffer, bytes.byteOffset);
 
   switch (width) {
     case 1:

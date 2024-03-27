@@ -1,12 +1,14 @@
 import { assertEquals } from "$std/assert/mod.ts";
 import FIFO from "https://deno.land/x/fifo@v0.2.2/mod.ts";
-import { decodeStreamPathRelative, GrowingBytes } from "../../mod.ts";
+import { GrowingBytes } from "../../mod.ts";
 import { PathScheme } from "../parameters/types.ts";
 import {
   decodePath,
   decodePathRelative,
   decodeStreamPath,
+  decodeStreamPathRelative,
   encodedPathLength,
+  encodedPathRelativeLength,
   encodePath,
   encodePathRelative,
   isPathPrefixed,
@@ -138,6 +140,15 @@ const pathEncodingVectors: PathEncodingVector[] = [
     new Uint8Array([4, 5, 6]),
     new Uint8Array([7, 8, 9]),
   ]],
+  [{
+    maxComponentCount: 16777215,
+    maxComponentLength: 16777215,
+    maxPathLength: 16777215,
+  }, [
+    new Uint8Array(),
+    new Uint8Array(),
+    new Uint8Array([7, 8, 9]),
+  ]],
 ];
 
 Deno.test("encode / decode", () => {
@@ -234,6 +245,18 @@ const relativePathEncodingVectors: RelativePathEncodingVector[] = [
   ], [
     new Uint8Array([1, 2, 3]),
   ]],
+  [{
+    maxComponentCount: 255,
+    maxComponentLength: 255,
+    maxPathLength: 255,
+  }, [
+    new Uint8Array(0),
+    new Uint8Array([1]),
+  ], [
+    new Uint8Array(0),
+    new Uint8Array(0),
+    new Uint8Array([2]),
+  ]],
 ];
 
 Deno.test("relative encode/decode", () => {
@@ -241,6 +264,14 @@ Deno.test("relative encode/decode", () => {
     const encoded = encodePathRelative(scheme, primary, reference);
     const decoded = decodePathRelative(scheme, encoded, reference);
     assertEquals(decoded, primary);
+  }
+});
+
+Deno.test("encode length (relative)", () => {
+  for (const [scheme, primary, reference] of relativePathEncodingVectors) {
+    const encoded = encodePathRelative(scheme, primary, reference);
+    const encodedLength = encodedPathRelativeLength(scheme, primary, reference);
+    assertEquals(encodedLength, encoded.byteLength);
   }
 });
 

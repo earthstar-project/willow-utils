@@ -197,7 +197,6 @@ export function areaTo3dRange<SubspaceType>(
   };
 }
 
-// The little things we need to do to get on with the TypeScript compiler.
 const REALLY_BIG_INT = BigInt(2 ** 64);
 
 /** `Math.min`, but for `BigInt`. */
