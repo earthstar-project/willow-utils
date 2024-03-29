@@ -8,10 +8,13 @@ import { orderBytes } from "../order/order.ts";
 import {
   decodeEntry,
   decodeStreamEntryRelativeEntry,
+  decodeStreamEntryRelativeRange3d,
   encodeEntry,
   encodeEntryRelativeEntry,
+  encodeEntryRelativeRange3d,
 } from "./entries.ts";
 import { Entry } from "./types.ts";
+import { OPEN_END, Range3d } from "../ranges/types.ts";
 
 export const testSchemeNamespace: EncodingScheme<Uint8Array> = {
   encode: (v: Uint8Array) => v,
@@ -91,7 +94,7 @@ const namespaceB = crypto.getRandomValues(new Uint8Array(8));
 const subspaceA = crypto.getRandomValues(new Uint8Array(16));
 const subspaceB = crypto.getRandomValues(new Uint8Array(16));
 
-const relativeEncodingVectors: [
+const relativeEntryEncodingVectors: [
   Entry<Uint8Array, Uint8Array, ArrayBuffer>,
   Entry<Uint8Array, Uint8Array, ArrayBuffer>,
 ][] = [
@@ -186,7 +189,7 @@ const relativeEncodingVectors: [
 ];
 
 Deno.test("Encoding (relative to another entry)", async () => {
-  for (const [entry, ref] of relativeEncodingVectors) {
+  for (const [entry, ref] of relativeEntryEncodingVectors) {
     const encoded = encodeEntryRelativeEntry(
       {
         encodeNamespace: testSchemeNamespace.encode,
@@ -256,6 +259,187 @@ Deno.test("Encoding (relative to another entry)", async () => {
       },
       bytes,
       ref,
+    );
+
+    assertEquals(decoded, entry);
+  }
+});
+
+const relativeRangeEncodingVectors: [
+  Entry<Uint8Array, Uint8Array, ArrayBuffer>,
+  Range3d<Uint8Array>,
+][] = [
+  [
+    {
+      namespaceId: namespaceA,
+      subspaceId: subspaceA,
+      path: [
+        new Uint8Array([1]),
+        new Uint8Array([2]),
+      ],
+      payloadLength: 1024n,
+      payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
+      timestamp: 1000n,
+    },
+    {
+      subspaceRange: {
+        start: subspaceA,
+        end: OPEN_END,
+      },
+      pathRange: {
+        start: [new Uint8Array([1])],
+        end: OPEN_END,
+      },
+      timeRange: {
+        start: 500n,
+        end: OPEN_END,
+      },
+    },
+  ],
+  [
+    {
+      namespaceId: namespaceA,
+      subspaceId: subspaceA,
+      path: [
+        new Uint8Array([1]),
+        new Uint8Array([2]),
+      ],
+      payloadLength: 1024n,
+      payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
+      timestamp: 1000n,
+    },
+    {
+      subspaceRange: {
+        start: subspaceB,
+        end: OPEN_END,
+      },
+      pathRange: {
+        start: [new Uint8Array([1])],
+        end: OPEN_END,
+      },
+      timeRange: {
+        start: 500n,
+        end: OPEN_END,
+      },
+    },
+  ],
+  [
+    {
+      namespaceId: namespaceA,
+      subspaceId: subspaceA,
+      path: [
+        new Uint8Array([1]),
+        new Uint8Array([2]),
+      ],
+      payloadLength: 1n,
+      payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
+      timestamp: 1000n,
+    },
+    {
+      subspaceRange: {
+        start: subspaceB,
+        end: OPEN_END,
+      },
+      pathRange: {
+        start: [],
+        end: [new Uint8Array([1]), new Uint8Array([2])],
+      },
+      timeRange: {
+        start: 500n,
+        end: OPEN_END,
+      },
+    },
+  ],
+  [
+    {
+      namespaceId: namespaceA,
+      subspaceId: subspaceA,
+      path: [
+        new Uint8Array([1]),
+        new Uint8Array([2]),
+      ],
+      payloadLength: 1n,
+      payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
+      timestamp: 1000n,
+    },
+    {
+      subspaceRange: {
+        start: subspaceB,
+        end: OPEN_END,
+      },
+      pathRange: {
+        start: [],
+        end: [new Uint8Array([1]), new Uint8Array([2])],
+      },
+      timeRange: {
+        start: 500n,
+        end: 1100n,
+      },
+    },
+  ],
+];
+
+Deno.test("Encoding (relative to a range)", async () => {
+  for (const [entry, outer] of relativeRangeEncodingVectors) {
+    const encoded = encodeEntryRelativeRange3d(
+      {
+        encodeNamespace: testSchemeNamespace.encode,
+        encodeSubspace: testSchemeSubspace.encode,
+        encodePayloadDigest: testSchemePayload.encode,
+        pathScheme: {
+          maxComponentCount: 255,
+          maxComponentLength: 255,
+          maxPathLength: 255,
+        },
+
+        orderSubspace: (a, b) => {
+          return orderBytes(a, b);
+        },
+      },
+      entry,
+      outer,
+    );
+
+    const stream = new FIFO<Uint8Array>();
+
+    const bytes = new GrowingBytes(stream);
+
+    (async () => {
+      for (const byte of encoded) {
+        stream.push(new Uint8Array([byte]));
+        await delay(0);
+      }
+    })();
+
+    const decoded = await decodeStreamEntryRelativeRange3d(
+      {
+        decodeStreamSubspace: async (bytes) => {
+          await bytes.nextAbsolute(16);
+
+          const subspace = bytes.array.slice(0, 16);
+
+          bytes.prune(16);
+
+          return subspace;
+        },
+        decodeStreamPayloadDigest: async (bytes) => {
+          await bytes.nextAbsolute(32);
+
+          const digest = bytes.array.slice(0, 32);
+
+          bytes.prune(8);
+
+          return digest;
+        },
+        pathScheme: {
+          maxComponentCount: 255,
+          maxComponentLength: 255,
+          maxPathLength: 255,
+        },
+      },
+      bytes,
+      outer,
+      entry.namespaceId,
     );
 
     assertEquals(decoded, entry);

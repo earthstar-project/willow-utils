@@ -10,13 +10,15 @@ import { EncodingScheme } from "../encoding/types.ts";
 import { TotalOrder } from "../order/types.ts";
 import { PathScheme } from "../parameters/types.ts";
 import {
+  commonPrefix,
   decodePath,
   decodeStreamPathRelative,
   encodedPathLength,
   encodePath,
   encodePathRelative,
 } from "../paths/paths.ts";
-import { Position3d } from "../ranges/types.ts";
+import { Path } from "../paths/types.ts";
+import { OPEN_END, Position3d, Range3d } from "../ranges/types.ts";
 import { Entry } from "./types.ts";
 
 /** Returns the `Position3d` of an `Entry`. */
@@ -109,6 +111,15 @@ const compactWidthEndMasks: Record<1 | 2 | 4 | 8, number> = {
 
 function bigAbs(n: bigint) {
   return n < 0n ? -n : n;
+}
+
+/** `Math.min`, but for `BigInt`. */
+function bigIntMin(a: bigint, b: bigint) {
+  if (a < b) {
+    return a;
+  }
+
+  return b;
 }
 
 export function encodeEntryRelativeEntry<
@@ -239,5 +250,233 @@ export async function decodeStreamEntryRelativeEntry<
     timestamp: addTimeDiff
       ? ref.timestamp + timeDiff
       : ref.timestamp - timeDiff,
+  };
+}
+
+export function encodeEntryRelativeRange3d<
+  NamespaceId,
+  SubspaceId,
+  PayloadDigest,
+>(
+  opts: {
+    encodeNamespace: (namespace: NamespaceId) => Uint8Array;
+    encodeSubspace: (subspace: SubspaceId) => Uint8Array;
+    encodePayloadDigest: (digest: PayloadDigest) => Uint8Array;
+    orderSubspace: TotalOrder<SubspaceId>;
+    pathScheme: PathScheme;
+  },
+  entry: Entry<NamespaceId, SubspaceId, PayloadDigest>,
+  outer: Range3d<SubspaceId>,
+): Uint8Array {
+  const timeDiff = bigAbs(
+    outer.timeRange.end !== OPEN_END
+      ? bigIntMin(
+        entry.timestamp - outer.timeRange.start,
+        entry.timestamp - outer.timeRange.end,
+      )
+      : entry.timestamp - outer.timeRange.start,
+  );
+
+  let encodeSubspaceIdFlag: number;
+  let encodedSubspace: Uint8Array;
+
+  if (opts.orderSubspace(entry.subspaceId, outer.subspaceRange.start) !== 0) {
+    encodeSubspaceIdFlag = 0x80;
+    encodedSubspace = opts.encodeSubspace(entry.subspaceId);
+  } else {
+    encodeSubspaceIdFlag = 0x0;
+    encodedSubspace = new Uint8Array();
+  }
+
+  let encodePathRelativeToStartFlag: number;
+
+  let encodedPath: Uint8Array;
+
+  if (outer.pathRange.end !== OPEN_END) {
+    const commonPrefixStart = commonPrefix(entry.path, outer.pathRange.start);
+    const commonPrefixEnd = commonPrefix(entry.path, outer.pathRange.end);
+
+    if (commonPrefixStart.length >= commonPrefixEnd.length) {
+      encodePathRelativeToStartFlag = 0x40;
+      encodedPath = encodePathRelative(
+        opts.pathScheme,
+        entry.path,
+        outer.pathRange.start,
+      );
+    } else {
+      encodePathRelativeToStartFlag = 0x0;
+      encodedPath = encodePathRelative(
+        opts.pathScheme,
+        entry.path,
+        outer.pathRange.end,
+      );
+    }
+  } else {
+    encodePathRelativeToStartFlag = 0x40;
+    encodedPath = encodePathRelative(
+      opts.pathScheme,
+      entry.path,
+      outer.pathRange.start,
+    );
+  }
+
+  const applyTimeDiffWithStartOrEnd =
+    timeDiff === bigAbs(entry.timestamp - outer.timeRange.start) ? 0x20 : 0x0;
+
+  let addOrSubtractTimeDiff: number;
+
+  if (outer.timeRange.end !== OPEN_END) {
+    addOrSubtractTimeDiff = (applyTimeDiffWithStartOrEnd === 0x20 &&
+        entry.timestamp >= outer.timeRange.start) ||
+        (applyTimeDiffWithStartOrEnd === 0x0 &&
+          entry.timestamp <= outer.timeRange.end)
+      ? 0x10
+      : 0x0;
+  } else {
+    addOrSubtractTimeDiff = applyTimeDiffWithStartOrEnd === 0x20 &&
+        entry.timestamp >= outer.timeRange.start
+      ? 0x10
+      : 0x0;
+  }
+
+  const timeDiffCompactWidthFlag =
+    compactWidthEndMasks[compactWidth(timeDiff)] << 2;
+  const payloadLengthFlag =
+    compactWidthEndMasks[compactWidth(entry.payloadLength)];
+
+  const header = encodeSubspaceIdFlag | encodePathRelativeToStartFlag |
+    applyTimeDiffWithStartOrEnd | addOrSubtractTimeDiff |
+    timeDiffCompactWidthFlag | payloadLengthFlag;
+
+  const encodedTimeDiff = encodeCompactWidth(timeDiff);
+
+  const encodedPayloadLength = encodeCompactWidth(entry.payloadLength);
+
+  const encodedPayloadDigest = opts.encodePayloadDigest(entry.payloadDigest);
+
+  return concat(
+    new Uint8Array([header]),
+    encodedSubspace,
+    encodedPath,
+    encodedTimeDiff,
+    encodedPayloadLength,
+    encodedPayloadDigest,
+  );
+}
+
+export async function decodeStreamEntryRelativeRange3d<
+  NamespaceId,
+  SubspaceId,
+  PayloadDigest,
+>(
+  opts: {
+    decodeStreamSubspace: (bytes: GrowingBytes) => Promise<SubspaceId>;
+    decodeStreamPayloadDigest: (bytes: GrowingBytes) => Promise<PayloadDigest>;
+    pathScheme: PathScheme;
+  },
+  bytes: GrowingBytes,
+  outer: Range3d<SubspaceId>,
+  namespaceId: NamespaceId,
+): Promise<
+  Entry<
+    NamespaceId,
+    SubspaceId,
+    PayloadDigest
+  >
+> {
+  await bytes.nextAbsolute(1);
+
+  const [header] = bytes.array;
+
+  const isSubspaceEncoded = (header & 0x80) === 0x80;
+  const isPathEncodedRelativeToStart = (header & 0x40) === 0x40;
+  const isTimeDiffCombinedWithStart = (header & 0x20) === 0x20;
+  const addOrSubtractTimedDiff = (header & 0x10) === 0x10;
+  const timeDiffCompactWidth = 2 ** ((header & 0xc) >> 2);
+  const payloadLengthCompactWidth = 2 ** (header & 0x3);
+
+  let subspaceId: SubspaceId;
+
+  bytes.prune(1);
+
+  if (isSubspaceEncoded) {
+    subspaceId = await opts.decodeStreamSubspace(bytes);
+  } else {
+    subspaceId = outer.subspaceRange.start;
+  }
+
+  let path: Path;
+
+  if (!isPathEncodedRelativeToStart) {
+    if (outer.pathRange.end === OPEN_END) {
+      throw new Error(
+        "The path cannot be encoded relative to an open end.",
+      );
+    }
+
+    path = await decodeStreamPathRelative(
+      opts.pathScheme,
+      bytes,
+      outer.pathRange.end,
+    );
+  } else {
+    path = await decodeStreamPathRelative(
+      opts.pathScheme,
+      bytes,
+      outer.pathRange.start,
+    );
+  }
+
+  await bytes.nextAbsolute(timeDiffCompactWidth);
+
+  const timeDiff = BigInt(decodeCompactWidth(
+    bytes.array.subarray(0, timeDiffCompactWidth),
+  ));
+
+  bytes.prune(timeDiffCompactWidth);
+
+  let timestamp: bigint;
+
+  console.log({
+    isTimeDiffCombinedWithStart,
+    addOrSubtractTimedDiff,
+    timeDiff,
+  });
+
+  if (isTimeDiffCombinedWithStart && addOrSubtractTimedDiff) {
+    timestamp = outer.timeRange.start + timeDiff;
+  } else if (isTimeDiffCombinedWithStart && !addOrSubtractTimedDiff) {
+    timestamp = outer.timeRange.start - timeDiff;
+  } else if (!isTimeDiffCombinedWithStart && addOrSubtractTimedDiff) {
+    if (outer.timeRange.end === OPEN_END) {
+      throw new Error("Can't apply time diff to an open end");
+    }
+
+    timestamp = outer.timeRange.end - timeDiff;
+  } else {
+    if (outer.timeRange.end === OPEN_END) {
+      throw new Error("Can't apply time diff to an open end");
+    }
+
+    timestamp = outer.timeRange.end + timeDiff;
+  }
+
+  await bytes.nextAbsolute(payloadLengthCompactWidth);
+
+  const payloadLength = BigInt(decodeCompactWidth(
+    bytes.array.subarray(0, payloadLengthCompactWidth),
+  ));
+
+  bytes.prune(payloadLengthCompactWidth);
+
+  const payloadDigest = await opts.decodeStreamPayloadDigest(bytes);
+
+  return {
+    namespaceId,
+    subspaceId,
+    path,
+    payloadDigest,
+    payloadLength,
+    timestamp,
   };
 }
