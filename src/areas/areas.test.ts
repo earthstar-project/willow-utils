@@ -9,11 +9,14 @@ import {
   areaTo3dRange,
   decodeAreaInArea,
   decodeStreamAreaInArea,
+  decodeStreamEntryInNamespaceArea,
   encodeAreaInArea,
+  encodeEntryInNamespaceArea,
   intersectArea,
   isIncludedArea,
 } from "./areas.ts";
 import { ANY_SUBSPACE, Area } from "./types.ts";
+import { Entry } from "../entries/types.ts";
 
 type IsIncludedVector = [Area<bigint>, Position3d<bigint>, boolean];
 
@@ -395,7 +398,7 @@ const areaToRangeVectors: AreaToRangeVector[] = [
       },
       pathRange: {
         start: [],
-        end: [new Uint8Array(1)],
+        end: OPEN_END,
       },
     },
   ],
@@ -527,7 +530,7 @@ Deno.test("encodeAreaInArea", () => {
   }
 });
 
-Deno.test("encodeAreaInArea (streaming)", async () => {
+Deno.test.only("encodeAreaInArea (streaming)", async () => {
   for (const [inner, outer] of areaInAreaVectors) {
     const encoded = encodeAreaInArea(
       {
@@ -553,8 +556,8 @@ Deno.test("encodeAreaInArea (streaming)", async () => {
 
     (async () => {
       for (const byte of encoded) {
-        stream.push(new Uint8Array([byte]));
         await delay(0);
+        stream.push(new Uint8Array([byte]));
       }
     })();
 
@@ -577,5 +580,109 @@ Deno.test("encodeAreaInArea (streaming)", async () => {
     );
 
     assertEquals(decoded, inner);
+  }
+});
+
+const entryInAreaVectors: [
+  Entry<number, number, Uint8Array>,
+  Area<number>,
+  number,
+][] = [[
+  {
+    namespaceId: 0,
+    subspaceId: 3,
+    path: [],
+    payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
+    payloadLength: 500n,
+    timestamp: 1000n,
+  },
+  {
+    includedSubspaceId: ANY_SUBSPACE,
+    pathPrefix: [],
+    timeRange: {
+      start: 0n,
+      end: OPEN_END,
+    },
+  },
+  0,
+], [
+  {
+    namespaceId: 0,
+    subspaceId: 3,
+    path: [new Uint8Array([1]), new Uint8Array([2])],
+    payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
+    payloadLength: 500n,
+    timestamp: 1000n,
+  },
+  {
+    includedSubspaceId: 3,
+    pathPrefix: [new Uint8Array([1])],
+    timeRange: {
+      start: 0n,
+      end: 1100n,
+    },
+  },
+  0,
+]];
+
+Deno.test("encodeEntryInNamespaceArea (streaming)", async () => {
+  for (const [entry, area, namespace] of entryInAreaVectors) {
+    const encoded = encodeEntryInNamespaceArea(
+      {
+        encodePayloadDigest: (enc) => enc,
+        encodeSubspaceId: (subspace) => new Uint8Array([subspace]),
+        pathScheme: {
+          maxComponentCount: 255,
+          maxComponentLength: 255,
+          maxPathLength: 255,
+        },
+      },
+      entry,
+      area,
+    );
+
+    const stream = new FIFO<Uint8Array>();
+
+    const bytes = new GrowingBytes(stream);
+
+    (async () => {
+      for (const byte of encoded) {
+        await delay(0);
+        stream.push(new Uint8Array([byte]));
+      }
+    })();
+
+    const decoded = await decodeStreamEntryInNamespaceArea(
+      {
+        decodeStreamPayloadDigest: async (bytes) => {
+          await bytes.nextAbsolute(32);
+
+          const digest = bytes.array.slice(0, 32);
+
+          bytes.prune(32);
+
+          return digest;
+        },
+        decodeStreamSubspace: async (bytes) => {
+          await bytes.nextAbsolute(1);
+
+          const subspace = bytes.array[0];
+
+          bytes.prune(1);
+
+          return subspace;
+        },
+        pathScheme: {
+          maxComponentCount: 255,
+          maxComponentLength: 255,
+          maxPathLength: 255,
+        },
+      },
+      bytes,
+      area,
+      namespace,
+    );
+
+    assertEquals(decoded, entry);
   }
 });

@@ -6,6 +6,7 @@ import {
 } from "../encoding/encoding.ts";
 import { GrowingBytes } from "../encoding/growing_bytes.ts";
 import { EncodingScheme } from "../encoding/types.ts";
+import { Entry } from "../entries/types.ts";
 import { orderTimestamp } from "../order/order.ts";
 import { successorPrefix } from "../order/successor.ts";
 import { SuccessorFn, TotalOrder } from "../order/types.ts";
@@ -467,6 +468,13 @@ export function decodeAreaInArea<SubspaceId>(
   };
 }
 
+const compactWidthEndMasks: Record<1 | 2 | 4 | 8, number> = {
+  1: 0x0,
+  2: 0x1,
+  4: 0x2,
+  8: 0x3,
+};
+
 export async function decodeStreamAreaInArea<SubspaceId>(
   opts: {
     pathScheme: PathScheme;
@@ -558,5 +566,163 @@ export async function decodeStreamAreaInArea<SubspaceId>(
         ? innerStart + endDiff
         : outer.timeRange.end as bigint - endDiff,
     },
+  };
+}
+
+export function encodeEntryInNamespaceArea<
+  NamespaceId,
+  SubspaceId,
+  PayloadDigest,
+>(
+  opts: {
+    encodeSubspaceId: (subspace: SubspaceId) => Uint8Array;
+    encodePayloadDigest: (digest: PayloadDigest) => Uint8Array;
+    pathScheme: PathScheme;
+  },
+  entry: Entry<NamespaceId, SubspaceId, PayloadDigest>,
+  outer: Area<SubspaceId>,
+): Uint8Array {
+  let timeDiff: bigint;
+
+  if (outer.timeRange.end === OPEN_END) {
+    timeDiff = entry.timestamp - outer.timeRange.start;
+  } else {
+    timeDiff = bigIntMin(
+      entry.timestamp - outer.timeRange.start,
+      outer.timeRange.end - entry.timestamp,
+    );
+  }
+
+  const isSubspaceAnyFlag = outer.includedSubspaceId === ANY_SUBSPACE
+    ? 0x80
+    : 0x0;
+
+  let addTimeToStartOrSubtractFromEndFlag: number;
+
+  if (outer.timeRange.end === OPEN_END) {
+    addTimeToStartOrSubtractFromEndFlag = 0x40;
+  } else {
+    addTimeToStartOrSubtractFromEndFlag =
+      entry.timestamp - outer.timeRange.start <= outer.timeRange.end
+        ? 0x40
+        : 0x0;
+  }
+
+  const compactWidthFlagsTimeDiff =
+    compactWidthEndMasks[compactWidth(timeDiff)] << 4;
+
+  const compactWidthFlagsPayloadLength =
+    compactWidthEndMasks[compactWidth(entry.payloadLength)] << 2;
+
+  const header = isSubspaceAnyFlag | addTimeToStartOrSubtractFromEndFlag |
+    compactWidthFlagsTimeDiff | compactWidthFlagsPayloadLength;
+
+  const encodedSubspace = outer.includedSubspaceId === ANY_SUBSPACE
+    ? new Uint8Array()
+    : opts.encodeSubspaceId(entry.subspaceId);
+
+  const encodedPath = encodePathRelative(
+    opts.pathScheme,
+    entry.path,
+    outer.pathPrefix,
+  );
+
+  const encodedTimeDiff = encodeCompactWidth(timeDiff);
+
+  const encodedPayloadLength = encodeCompactWidth(entry.payloadLength);
+
+  const encodedPayloadDigest = opts.encodePayloadDigest(entry.payloadDigest);
+
+  return concat(
+    new Uint8Array([header]),
+    encodedSubspace,
+    encodedPath,
+    encodedTimeDiff,
+    encodedPayloadLength,
+    encodedPayloadDigest,
+  );
+}
+
+export async function decodeStreamEntryInNamespaceArea<
+  NamespaceId,
+  SubspaceId,
+  PayloadDigest,
+>(
+  opts: {
+    decodeStreamSubspace: (bytes: GrowingBytes) => Promise<SubspaceId>;
+    decodeStreamPayloadDigest: (bytes: GrowingBytes) => Promise<PayloadDigest>;
+    pathScheme: PathScheme;
+  },
+  bytes: GrowingBytes,
+  outer: Area<SubspaceId>,
+  namespace: NamespaceId,
+): Promise<Entry<NamespaceId, SubspaceId, PayloadDigest>> {
+  await bytes.nextAbsolute(1);
+
+  const [header] = bytes.array;
+
+  const isSubspaceEncoded = (header & 0x80) === 0x80;
+  const addToStartOrSubstractFromEnd = (header & 0x40) === 0x40;
+  const compactWidthTimeDiff = 2 ** (header & 0x30 >> 4);
+  const compactWidthPayloadLength = 2 ** (header & 0xc >> 2);
+
+  bytes.prune(1);
+
+  let subspace: SubspaceId;
+
+  if (isSubspaceEncoded) {
+    subspace = await opts.decodeStreamSubspace(bytes);
+  } else if (outer.includedSubspaceId !== ANY_SUBSPACE) {
+    subspace = outer.includedSubspaceId;
+  } else {
+    throw new Error(
+      "Entry was encoded relative to area with specified subspace",
+    );
+  }
+
+  const path = await decodeStreamPathRelative(
+    opts.pathScheme,
+    bytes,
+    outer.pathPrefix,
+  );
+
+  await bytes.nextAbsolute(compactWidthTimeDiff);
+
+  const timeDiff = BigInt(decodeCompactWidth(
+    bytes.array.subarray(0, compactWidthTimeDiff),
+  ));
+
+  await bytes.nextAbsolute(compactWidthPayloadLength);
+
+  const payloadLength = BigInt(decodeCompactWidth(
+    bytes.array.subarray(
+      compactWidthTimeDiff,
+      compactWidthTimeDiff + compactWidthPayloadLength,
+    ),
+  ));
+
+  bytes.prune(compactWidthTimeDiff + compactWidthPayloadLength);
+
+  const payloadDigest = await opts.decodeStreamPayloadDigest(bytes);
+
+  let timestamp: bigint;
+
+  if (addToStartOrSubstractFromEnd) {
+    timestamp = timeDiff + outer.timeRange.start;
+  } else if (outer.timeRange.end !== OPEN_END) {
+    timestamp = outer.timeRange.end - timeDiff;
+  } else {
+    throw new Error(
+      "Entry was encoded relative to area with concrete time end",
+    );
+  }
+
+  return {
+    namespaceId: namespace,
+    subspaceId: subspace,
+    path,
+    payloadLength,
+    payloadDigest,
+    timestamp,
   };
 }
