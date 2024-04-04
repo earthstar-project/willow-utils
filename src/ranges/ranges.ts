@@ -1102,3 +1102,22 @@ export async function decodeStreamRange3dRelative<SubspaceId>(
     },
   };
 }
+
+export function defaultRange3d<SubspaceId>(
+  defaultSubspace: SubspaceId,
+): Range3d<SubspaceId> {
+  return {
+    subspaceRange: {
+      start: defaultSubspace,
+      end: OPEN_END,
+    },
+    pathRange: {
+      start: [],
+      end: OPEN_END,
+    },
+    timeRange: {
+      start: 0n,
+      end: OPEN_END,
+    },
+  };
+}

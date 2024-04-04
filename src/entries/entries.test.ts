@@ -200,8 +200,8 @@ Deno.test("Encoding (relative to another entry)", async () => {
           maxComponentLength: 255,
           maxPathLength: 255,
         },
-        orderNamespace: (a, b) => {
-          return orderBytes(a, b);
+        isEqualNamespace: (a, b) => {
+          return orderBytes(a, b) === 0;
         },
         orderSubspace: (a, b) => {
           return orderBytes(a, b);
@@ -217,8 +217,8 @@ Deno.test("Encoding (relative to another entry)", async () => {
 
     (async () => {
       for (const byte of encoded) {
-        stream.push(new Uint8Array([byte]));
         await delay(0);
+        stream.push(new Uint8Array([byte]));
       }
     })();
 
@@ -360,7 +360,7 @@ const relativeRangeEncodingVectors: [
       ],
       payloadLength: 1n,
       payloadDigest: crypto.getRandomValues(new Uint8Array(32)),
-      timestamp: 1000n,
+      timestamp: 1100n,
     },
     {
       subspaceRange: {
@@ -406,8 +406,8 @@ Deno.test("Encoding (relative to a range)", async () => {
 
     (async () => {
       for (const byte of encoded) {
-        stream.push(new Uint8Array([byte]));
         await delay(0);
+        stream.push(new Uint8Array([byte]));
       }
     })();
 

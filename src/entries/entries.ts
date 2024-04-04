@@ -131,7 +131,7 @@ export function encodeEntryRelativeEntry<
     encodeNamespace: (namespace: NamespaceId) => Uint8Array;
     encodeSubspace: (subspace: SubspaceId) => Uint8Array;
     encodePayloadDigest: (digest: PayloadDigest) => Uint8Array;
-    orderNamespace: TotalOrder<NamespaceId>;
+    isEqualNamespace: (a: NamespaceId, b: NamespaceId) => boolean;
     orderSubspace: TotalOrder<SubspaceId>;
     pathScheme: PathScheme;
   },
@@ -141,7 +141,7 @@ export function encodeEntryRelativeEntry<
   const timeDiff = bigAbs(entry.timestamp - ref.timestamp);
 
   const encodeNamespaceFlag =
-    opts.orderNamespace(entry.namespaceId, ref.namespaceId) !== 0 ? 0x80 : 0x0;
+    !opts.isEqualNamespace(entry.namespaceId, ref.namespaceId) ? 0x80 : 0x0;
 
   const encodeSubspaceFlag =
     opts.orderSubspace(entry.subspaceId, ref.subspaceId) !== 0 ? 0x40 : 0x0;
@@ -268,14 +268,12 @@ export function encodeEntryRelativeRange3d<
   entry: Entry<NamespaceId, SubspaceId, PayloadDigest>,
   outer: Range3d<SubspaceId>,
 ): Uint8Array {
-  const timeDiff = bigAbs(
-    outer.timeRange.end !== OPEN_END
-      ? bigIntMin(
-        entry.timestamp - outer.timeRange.start,
-        entry.timestamp - outer.timeRange.end,
-      )
-      : entry.timestamp - outer.timeRange.start,
-  );
+  const timeDiff = outer.timeRange.end !== OPEN_END
+    ? bigIntMin(
+      bigAbs(entry.timestamp - outer.timeRange.start),
+      bigAbs(entry.timestamp - outer.timeRange.end),
+    )
+    : bigAbs(entry.timestamp - outer.timeRange.start);
 
   let encodeSubspaceIdFlag: number;
   let encodedSubspace: Uint8Array;
@@ -323,17 +321,17 @@ export function encodeEntryRelativeRange3d<
   const applyTimeDiffWithStartOrEnd =
     timeDiff === bigAbs(entry.timestamp - outer.timeRange.start) ? 0x20 : 0x0;
 
-  let addOrSubtractTimeDiff: number;
+  let addOrSubtractTimeDiffFlag: number;
 
   if (outer.timeRange.end !== OPEN_END) {
-    addOrSubtractTimeDiff = (applyTimeDiffWithStartOrEnd === 0x20 &&
+    addOrSubtractTimeDiffFlag = (applyTimeDiffWithStartOrEnd === 0x20 &&
         entry.timestamp >= outer.timeRange.start) ||
         (applyTimeDiffWithStartOrEnd === 0x0 &&
-          entry.timestamp <= outer.timeRange.end)
+          entry.timestamp >= outer.timeRange.end)
       ? 0x10
       : 0x0;
   } else {
-    addOrSubtractTimeDiff = applyTimeDiffWithStartOrEnd === 0x20 &&
+    addOrSubtractTimeDiffFlag = applyTimeDiffWithStartOrEnd === 0x20 &&
         entry.timestamp >= outer.timeRange.start
       ? 0x10
       : 0x0;
@@ -345,7 +343,7 @@ export function encodeEntryRelativeRange3d<
     compactWidthEndMasks[compactWidth(entry.payloadLength)];
 
   const header = encodeSubspaceIdFlag | encodePathRelativeToStartFlag |
-    applyTimeDiffWithStartOrEnd | addOrSubtractTimeDiff |
+    applyTimeDiffWithStartOrEnd | addOrSubtractTimeDiffFlag |
     timeDiffCompactWidthFlag | payloadLengthFlag;
 
   const encodedTimeDiff = encodeCompactWidth(timeDiff);
@@ -437,12 +435,6 @@ export async function decodeStreamEntryRelativeRange3d<
 
   let timestamp: bigint;
 
-  console.log({
-    isTimeDiffCombinedWithStart,
-    addOrSubtractTimedDiff,
-    timeDiff,
-  });
-
   if (isTimeDiffCombinedWithStart && addOrSubtractTimedDiff) {
     timestamp = outer.timeRange.start + timeDiff;
   } else if (isTimeDiffCombinedWithStart && !addOrSubtractTimedDiff) {
@@ -452,13 +444,13 @@ export async function decodeStreamEntryRelativeRange3d<
       throw new Error("Can't apply time diff to an open end");
     }
 
-    timestamp = outer.timeRange.end - timeDiff;
+    timestamp = outer.timeRange.end + timeDiff;
   } else {
     if (outer.timeRange.end === OPEN_END) {
       throw new Error("Can't apply time diff to an open end");
     }
 
-    timestamp = outer.timeRange.end + timeDiff;
+    timestamp = outer.timeRange.end - timeDiff;
   }
 
   await bytes.nextAbsolute(payloadLengthCompactWidth);
@@ -478,5 +470,20 @@ export async function decodeStreamEntryRelativeRange3d<
     payloadDigest,
     payloadLength,
     timestamp,
+  };
+}
+
+export function defaultEntry<NamespaceId, SubspaceId, PayloadDigest>(
+  defaultNamespace: NamespaceId,
+  defaultSubspace: SubspaceId,
+  defaultPayloadDigest: PayloadDigest,
+): Entry<NamespaceId, SubspaceId, PayloadDigest> {
+  return {
+    namespaceId: defaultNamespace,
+    subspaceId: defaultSubspace,
+    path: [],
+    timestamp: 0n,
+    payloadLength: 0n,
+    payloadDigest: defaultPayloadDigest,
   };
 }
