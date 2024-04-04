@@ -485,8 +485,8 @@ Deno.test("encodeRange3dRelative (streaming)", async () => {
 
     (async () => {
       for (const byte of encoded) {
-        stream.push(new Uint8Array([byte]));
         await delay(0);
+        stream.push(new Uint8Array([byte]));
       }
     })();
 

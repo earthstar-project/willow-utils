@@ -177,8 +177,8 @@ Deno.test("decode (streaming)", async () => {
 
     (async () => {
       for (const byte of encoded) {
-        stream.push(new Uint8Array([byte]));
         await delay(0);
+        stream.push(new Uint8Array([byte]));
       }
     })();
 
@@ -285,8 +285,8 @@ Deno.test("relative decode (streaming)", async () => {
 
     (async () => {
       for (const byte of encoded) {
-        stream.push(new Uint8Array([byte]));
         await delay(0);
+        stream.push(new Uint8Array([byte]));
       }
     })();
 
