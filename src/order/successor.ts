@@ -126,6 +126,7 @@ export function successorBytesFixedWidth(bytes: Uint8Array): Uint8Array | null {
     if (!didIncrement) {
       newBytes.set([byte + 1], i);
       didIncrement = true;
+      break;
     }
   }
 
