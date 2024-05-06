@@ -10,7 +10,7 @@ export type KeypairEncodingScheme<PublicKey, Signature> = {
 
 /** A scheme for signing and verifying data using key pairs. */
 export type SignatureScheme<PublicKey, SecretKey, Signature> = {
-  sign: (secretKey: SecretKey, bytestring: Uint8Array) => Promise<Signature>;
+  sign: (publicKey: PublicKey, secretKey: SecretKey, bytestring: Uint8Array) => Promise<Signature>;
   verify: (
     publicKey: PublicKey,
     signature: Signature,
