@@ -1,6 +1,6 @@
-import { PathScheme } from "../parameters/types.ts";
+import type { PathScheme } from "../parameters/types.ts";
 import { isValidPath } from "../paths/paths.ts";
-import { Path } from "../paths/types.ts";
+import type { Path } from "../paths/types.ts";
 
 /** Returns the successor to a path given a `Path` and `PathScheme`.  */
 export function successorPath(

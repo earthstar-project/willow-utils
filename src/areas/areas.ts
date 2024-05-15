@@ -1,19 +1,18 @@
-import { concat } from "../../deps.ts";
+import { concat } from "@std/bytes";
 import {
   compactWidth,
   decodeCompactWidth,
   encodeCompactWidth,
 } from "../encoding/encoding.ts";
-import { GrowingBytes } from "../encoding/growing_bytes.ts";
-import { EncodingScheme } from "../encoding/types.ts";
-import { Entry } from "../entries/types.ts";
+import type { GrowingBytes } from "../encoding/growing_bytes.ts";
+import type { EncodingScheme } from "../encoding/types.ts";
+import type { Entry } from "../entries/types.ts";
 import { orderTimestamp } from "../order/order.ts";
 import { successorPrefix } from "../order/successor.ts";
-import { SuccessorFn, TotalOrder } from "../order/types.ts";
-import { PathScheme } from "../parameters/types.ts";
+import type { SuccessorFn, TotalOrder } from "../order/types.ts";
+import type { PathScheme } from "../parameters/types.ts";
 import {
   decodePathRelative,
-  decodeStreamPath,
   decodeStreamPathRelative,
   encodedPathRelativeLength,
   encodePathRelative,
@@ -24,9 +23,10 @@ import {
   isIncludedRange,
   rangeIsIncluded,
 } from "../ranges/ranges.ts";
-import { OPEN_END, Position3d, Range3d } from "../ranges/types.ts";
-import { ANY_SUBSPACE, Area } from "./types.ts";
+import { OPEN_END, type Position3d, type Range3d } from "../ranges/types.ts";
+import { ANY_SUBSPACE, type Area } from "./types.ts";
 
+/** The full area is the Area including all Entries. */
 export function fullArea<SubspaceId>(): Area<SubspaceId> {
   return {
     includedSubspaceId: ANY_SUBSPACE,
@@ -38,6 +38,7 @@ export function fullArea<SubspaceId>(): Area<SubspaceId> {
   };
 }
 
+/** The subspace area is the Area include all entries with a given subspace ID. */
 export function subspaceArea<SubspaceId>(
   subspaceId: SubspaceId,
 ): Area<SubspaceId> {
@@ -312,14 +313,17 @@ export function encodeAreaInArea<SubspaceId>(
     );
 
   return concat(
-    flagByte,
-    startDiffBytes,
-    endDiffBytes,
-    relativePathBytes,
-    subspaceIdBytes,
+    [
+      flagByte,
+      startDiffBytes,
+      endDiffBytes,
+      relativePathBytes,
+      subspaceIdBytes,
+    ],
   );
 }
 
+/** The length of an encoded area in area. */
 export function encodeAreaInAreaLength<SubspaceId>(
   opts: {
     encodeSubspaceIdLength: (subspace: SubspaceId) => number;
@@ -328,7 +332,7 @@ export function encodeAreaInAreaLength<SubspaceId>(
   },
   inner: Area<SubspaceId>,
   outer: Area<SubspaceId>,
-) {
+): number {
   const isSubspaceSame = (inner.includedSubspaceId === ANY_SUBSPACE &&
     outer.includedSubspaceId === ANY_SUBSPACE) ||
     (inner.includedSubspaceId !== ANY_SUBSPACE &&
@@ -634,12 +638,14 @@ export function encodeEntryInNamespaceArea<
   const encodedPayloadDigest = opts.encodePayloadDigest(entry.payloadDigest);
 
   return concat(
-    new Uint8Array([header]),
-    encodedSubspace,
-    encodedPath,
-    encodedTimeDiff,
-    encodedPayloadLength,
-    encodedPayloadDigest,
+    [
+      new Uint8Array([header]),
+      encodedSubspace,
+      encodedPath,
+      encodedTimeDiff,
+      encodedPayloadLength,
+      encodedPayloadDigest,
+    ],
   );
 }
 

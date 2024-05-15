@@ -1,10 +1,9 @@
-import { assertEquals } from "$std/assert/assert_equals.ts";
-import { delay } from "https://deno.land/std@0.202.0/async/delay.ts";
+import { assertEquals } from "@std/assert";
+import { delay } from "@std/async";
 import FIFO from "https://deno.land/x/fifo@v0.2.2/mod.ts";
 import { GrowingBytes } from "../encoding/growing_bytes.ts";
-import { EncodingScheme } from "../encoding/types.ts";
+import type { EncodingScheme } from "../encoding/types.ts";
 import { orderBytes } from "../order/order.ts";
-
 import {
   decodeEntry,
   decodeStreamEntryRelativeEntry,
@@ -13,8 +12,8 @@ import {
   encodeEntryRelativeEntry,
   encodeEntryRelativeRange3d,
 } from "./entries.ts";
-import { Entry } from "./types.ts";
-import { OPEN_END, Range3d } from "../ranges/types.ts";
+import type { Entry } from "./types.ts";
+import { OPEN_END, type Range3d } from "../ranges/types.ts";
 
 export const testSchemeNamespace: EncodingScheme<Uint8Array> = {
   encode: (v: Uint8Array) => v,

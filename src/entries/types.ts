@@ -1,4 +1,4 @@
-import { Path } from "../paths/types.ts";
+import type { Path } from "../paths/types.ts";
 
 /** The metadata for storing a payload. */
 export type Entry<NamespaceId, SubspaceId, PayloadDigest> = {

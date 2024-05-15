@@ -1,5 +1,5 @@
-import { assertEquals } from "$std/assert/assert_equals.ts";
-import { Path } from "../paths/types.ts";
+import { assertEquals } from "@std/assert";
+import type { Path } from "../paths/types.ts";
 import { orderPath } from "./order.ts";
 
 type OrderVector = [Path, Path, -1 | 0 | 1];

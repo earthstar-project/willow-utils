@@ -1,5 +1,6 @@
-import { Range } from "../ranges/types.ts";
+import type { Range } from "../ranges/types.ts";
 
+/** Represents any subspace ID. */
 export const ANY_SUBSPACE = Symbol("ANY_SUBSPACE");
 
 /** A grouping of Entries.

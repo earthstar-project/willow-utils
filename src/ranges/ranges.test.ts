@@ -1,9 +1,9 @@
-import { assert, assertEquals } from "$std/assert/mod.ts";
+import { assert, assertEquals } from "@std/assert";
 import FIFO from "https://deno.land/x/fifo@v0.2.2/mod.ts";
 
 import { orderTimestamp } from "../order/order.ts";
 import { successorPath } from "../order/successor.ts";
-import { Path } from "../paths/types.ts";
+import type { Path } from "../paths/types.ts";
 import {
   decodeRange3dRelative,
   decodeStreamRange3dRelative,
@@ -15,7 +15,7 @@ import {
   isValidRange3d,
   rangeIsIncluded,
 } from "./ranges.ts";
-import { OPEN_END, Range, Range3d } from "./types.ts";
+import { OPEN_END, type Range, type Range3d } from "./types.ts";
 import { delay } from "https://deno.land/std@0.202.0/async/delay.ts";
 import { GrowingBytes } from "../encoding/growing_bytes.ts";
 

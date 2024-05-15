@@ -1,14 +1,14 @@
-import { concat } from "../../deps.ts";
+import { concat } from "@std/bytes";
 import {
   bigintToBytes,
   compactWidth,
   decodeCompactWidth,
   encodeCompactWidth,
 } from "../encoding/encoding.ts";
-import { GrowingBytes } from "../encoding/growing_bytes.ts";
-import { EncodingScheme } from "../encoding/types.ts";
-import { TotalOrder } from "../order/types.ts";
-import { PathScheme } from "../parameters/types.ts";
+import type { GrowingBytes } from "../encoding/growing_bytes.ts";
+import type { EncodingScheme } from "../encoding/types.ts";
+import type { TotalOrder } from "../order/types.ts";
+import type { PathScheme } from "../parameters/types.ts";
 import {
   commonPrefix,
   decodePath,
@@ -17,9 +17,9 @@ import {
   encodePath,
   encodePathRelative,
 } from "../paths/paths.ts";
-import { Path } from "../paths/types.ts";
-import { OPEN_END, Position3d, Range3d } from "../ranges/types.ts";
-import { Entry } from "./types.ts";
+import type { Path } from "../paths/types.ts";
+import { OPEN_END, type Position3d, type Range3d } from "../ranges/types.ts";
+import type { Entry } from "./types.ts";
 
 /** Returns the `Position3d` of an `Entry`. */
 export function entryPosition<NamespaceKey, SubspaceKey, PayloadDigest>(
@@ -46,12 +46,14 @@ export function encodeEntry<NamespaceKey, SubspaceKey, PayloadDigest>(
   entry: Entry<NamespaceKey, SubspaceKey, PayloadDigest>,
 ): Uint8Array {
   return concat(
-    opts.namespaceScheme.encode(entry.namespaceId),
-    opts.subspaceScheme.encode(entry.subspaceId),
-    encodePath(opts.pathScheme, entry.path),
-    bigintToBytes(entry.timestamp),
-    bigintToBytes(entry.payloadLength),
-    opts.payloadScheme.encode(entry.payloadDigest),
+    [
+      opts.namespaceScheme.encode(entry.namespaceId),
+      opts.subspaceScheme.encode(entry.subspaceId),
+      encodePath(opts.pathScheme, entry.path),
+      bigintToBytes(entry.timestamp),
+      bigintToBytes(entry.payloadLength),
+      opts.payloadScheme.encode(entry.payloadDigest),
+    ],
   );
 }
 
@@ -177,13 +179,15 @@ export function encodeEntryRelativeEntry<
     compactWidthPayloadLengthFlag;
 
   return concat(
-    new Uint8Array([header]),
-    encodedNamespace,
-    encodedSubspace,
-    encodedPath,
-    encodedTimeDiff,
-    encodedPayloadLength,
-    encodedDigest,
+    [
+      new Uint8Array([header]),
+      encodedNamespace,
+      encodedSubspace,
+      encodedPath,
+      encodedTimeDiff,
+      encodedPayloadLength,
+      encodedDigest,
+    ],
   );
 }
 
@@ -353,12 +357,14 @@ export function encodeEntryRelativeRange3d<
   const encodedPayloadDigest = opts.encodePayloadDigest(entry.payloadDigest);
 
   return concat(
-    new Uint8Array([header]),
-    encodedSubspace,
-    encodedPath,
-    encodedTimeDiff,
-    encodedPayloadLength,
-    encodedPayloadDigest,
+    [
+      new Uint8Array([header]),
+      encodedSubspace,
+      encodedPath,
+      encodedTimeDiff,
+      encodedPayloadLength,
+      encodedPayloadDigest,
+    ],
   );
 }
 

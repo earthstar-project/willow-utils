@@ -1,13 +1,13 @@
-import { concat } from "../../deps.ts";
+import { concat } from "@std/bytes";
 import {
   compactWidth,
   decodeCompactWidth,
   encodeCompactWidth,
 } from "../encoding/encoding.ts";
-import { GrowingBytes } from "../encoding/growing_bytes.ts";
+import type { GrowingBytes } from "../encoding/growing_bytes.ts";
 import { orderPath, orderTimestamp } from "../order/order.ts";
-import { TotalOrder } from "../order/types.ts";
-import { PathScheme } from "../parameters/types.ts";
+import type { TotalOrder } from "../order/types.ts";
+import type { PathScheme } from "../parameters/types.ts";
 import {
   commonPrefix,
   decodePathRelative,
@@ -15,8 +15,13 @@ import {
   encodedPathRelativeLength,
   encodePathRelative,
 } from "../paths/paths.ts";
-import { Path } from "../paths/types.ts";
-import { OPEN_END, Position3d, Range, Range3d } from "./types.ts";
+import type { Path } from "../paths/types.ts";
+import {
+  OPEN_END,
+  type Position3d,
+  type Range,
+  type Range3d,
+} from "./types.ts";
 
 /** Order a given pair of ranges by their type. Useful for functions using boolean logic based on the different combinations of range types. */
 export function orderRangePair<ValueType>(
@@ -248,7 +253,7 @@ export function isEqualRangeValue<ValueType>(
   order: TotalOrder<ValueType>,
   a: ValueType | typeof OPEN_END,
   b: ValueType | typeof OPEN_END,
-) {
+): boolean {
   if (a === OPEN_END && b === OPEN_END) {
     return true;
   }
@@ -595,13 +600,15 @@ export function encodeRange3dRelative<SubspaceId>(
     compactWidthEndTimeFlag;
 
   return concat(
-    new Uint8Array([firstByte, secondByte]),
-    encodedSubspaceStart,
-    encodedSubspaceEnd,
-    encodedPathStart,
-    encodedPathEnd,
-    encodedStartTime,
-    encodedEndTime,
+    [
+      new Uint8Array([firstByte, secondByte]),
+      encodedSubspaceStart,
+      encodedSubspaceEnd,
+      encodedPathStart,
+      encodedPathEnd,
+      encodedStartTime,
+      encodedEndTime,
+    ],
   );
 }
 
@@ -1103,6 +1110,7 @@ export async function decodeStreamRange3dRelative<SubspaceId>(
   };
 }
 
+/** The open 3d range starting at a given default subspace ID. */
 export function defaultRange3d<SubspaceId>(
   defaultSubspace: SubspaceId,
 ): Range3d<SubspaceId> {

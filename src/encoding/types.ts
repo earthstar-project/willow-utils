@@ -1,4 +1,4 @@
-import { GrowingBytes } from "./growing_bytes.ts";
+import type { GrowingBytes } from "./growing_bytes.ts";
 
 export type StreamDecoder<ValueType> = (
   value: GrowingBytes,

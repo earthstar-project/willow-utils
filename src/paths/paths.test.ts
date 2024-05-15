@@ -1,7 +1,6 @@
-import { assertEquals } from "$std/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 import FIFO from "https://deno.land/x/fifo@v0.2.2/mod.ts";
-import { GrowingBytes } from "../../mod.ts";
-import { PathScheme } from "../parameters/types.ts";
+import type { PathScheme } from "../parameters/types.ts";
 import {
   decodePath,
   decodePathRelative,
@@ -15,8 +14,9 @@ import {
   isValidPath,
   prefixesOf,
 } from "./paths.ts";
-import { Path } from "./types.ts";
-import { delay } from "https://deno.land/std@0.202.0/async/delay.ts";
+import type { Path } from "./types.ts";
+import { delay } from "@std/async";
+import { GrowingBytes } from "../encoding/growing_bytes.ts";
 
 type PrefixesOfVector = [Path, Path[]];
 

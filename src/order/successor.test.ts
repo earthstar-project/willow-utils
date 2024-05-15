@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "$std/assert/mod.ts";
+import { assert, assertEquals } from "@std/assert";
 import { orderPath } from "./order.ts";
 import { successorPath, successorPrefix } from "./successor.ts";
 

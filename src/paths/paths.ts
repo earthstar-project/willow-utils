@@ -1,13 +1,13 @@
-import { concat, equalsBytes } from "../../deps.ts";
-import { GrowingBytes } from "../../mod.ts";
+import { concat, equals as equalsBytes } from "@std/bytes";
+import type { GrowingBytes } from "../../mod.ts";
 import {
   decodeUintMax32,
   encodeUintMax32,
   max32Width,
 } from "../encoding/encoding.ts";
 import { orderBytes } from "../order/order.ts";
-import { PathScheme } from "../parameters/types.ts";
-import { Path } from "./types.ts";
+import type { PathScheme } from "../parameters/types.ts";
+import type { Path } from "./types.ts";
 
 /** Return all prefixes of a given path (which included the path itself), in order of path length. */
 export function prefixesOf(path: Path): Path[] {
@@ -107,10 +107,10 @@ export function encodePath(pathScheme: PathScheme, path: Path): Uint8Array {
       pathScheme.maxComponentLength,
     );
 
-    componentBytes.push(concat(lengthBytes, component));
+    componentBytes.push(concat([lengthBytes, component]));
   }
 
-  return concat(componentCountBytes, ...componentBytes);
+  return concat([componentCountBytes, ...componentBytes]);
 }
 
 /** Decodes a path.
@@ -234,7 +234,7 @@ export function encodePathRelative(
   toEncode: Path,
   /** The path being encoded relative to `reference`. */
   reference: Path,
-) {
+): Uint8Array {
   const longestPrefixLength = commonPrefix(toEncode, reference).length;
 
   const prefixLengthBytes = encodeUintMax32(
@@ -246,7 +246,7 @@ export function encodePathRelative(
 
   const suffixBytes = encodePath(scheme, suffix);
 
-  return concat(prefixLengthBytes, suffixBytes);
+  return concat([prefixLengthBytes, suffixBytes]);
 }
 
 /** Decodes a `Path` relative to another `Path`.
@@ -306,7 +306,7 @@ export function encodedPathRelativeLength(
   scheme: PathScheme,
   primary: Path,
   reference: Path,
-) {
+): number {
   const longestPrefixLength = commonPrefix(reference, primary).length;
 
   const prefixLengthLength = max32Width(scheme.maxComponentCount);

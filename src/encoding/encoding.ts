@@ -48,7 +48,7 @@ export function encodeUintMax32(num: number, max: number): Uint8Array {
 }
 
 /** Decodes an UintMax unsigned integer,  */
-export function decodeUintMax32(bytes: Uint8Array, max: number) {
+export function decodeUintMax32(bytes: Uint8Array, max: number): number {
   const bytesToDecodeLength = max32Width(max);
 
   if (bytesToDecodeLength > 4) {

@@ -1,7 +1,7 @@
-import { assertEquals } from "https://deno.land/std@0.202.0/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 import { FIFO } from "https://deno.land/x/fifo@v0.2.2/mod.ts";
 import { GrowingBytes } from "./growing_bytes.ts";
-import { delay } from "https://deno.land/std@0.202.0/async/delay.ts";
+import { delay } from "@std/async";
 
 Deno.test("GrowingBytes (relative)", async () => {
   const fifo = new FIFO<Uint8Array>();

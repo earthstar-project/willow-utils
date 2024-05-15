@@ -1,15 +1,18 @@
-import { concat, Deferred, deferred } from "../../deps.ts";
+import { concat } from "@std/bytes";
 
 /** An array of growing bytes which can be awaited upon and pruned. */
 export class GrowingBytes {
-  array = new Uint8Array();
+  /** All received bytes. */
+  array: Uint8Array = new Uint8Array();
 
-  private deferredUntilLength: [number, Deferred<Uint8Array>] | null = null;
+  private deferredUntilLength:
+    | [number, PromiseWithResolvers<Uint8Array>]
+    | null = null;
 
   constructor(incoming: AsyncIterable<Uint8Array>) {
     (async () => {
       for await (const chunk of incoming) {
-        this.array = concat(this.array, chunk);
+        this.array = concat([this.array, chunk]);
 
         if (
           this.deferredUntilLength &&
@@ -43,17 +46,17 @@ export class GrowingBytes {
       this.deferredUntilLength &&
       this.deferredUntilLength[0] === target
     ) {
-      return this.deferredUntilLength[1];
+      return this.deferredUntilLength[1].promise;
     }
 
-    const deferredPromise = deferred<Uint8Array>();
+    const promiseWithResolvers = Promise.withResolvers<Uint8Array>();
 
     this.deferredUntilLength = [
       target,
-      deferredPromise,
+      promiseWithResolvers,
     ];
 
-    return deferredPromise;
+    return promiseWithResolvers.promise;
   }
 
   /** Prunes the array by the given bytelength. */

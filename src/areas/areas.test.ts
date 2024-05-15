@@ -1,9 +1,9 @@
-import { assertEquals } from "$std/assert/assert_equals.ts";
-import { delay } from "https://deno.land/std@0.202.0/async/delay.ts";
+import { assertEquals } from "@std/assert";
+import { delay } from "@std/async";
 import FIFO from "https://deno.land/x/fifo@v0.2.2/mod.ts";
 import { GrowingBytes } from "../encoding/growing_bytes.ts";
 import { orderTimestamp } from "../order/order.ts";
-import { OPEN_END, Position3d, Range3d } from "../ranges/types.ts";
+import { OPEN_END, type Position3d, type Range3d } from "../ranges/types.ts";
 import {
   areaIsIncluded,
   areaTo3dRange,
@@ -15,8 +15,8 @@ import {
   intersectArea,
   isIncludedArea,
 } from "./areas.ts";
-import { ANY_SUBSPACE, Area } from "./types.ts";
-import { Entry } from "../entries/types.ts";
+import { ANY_SUBSPACE, type Area } from "./types.ts";
+import type { Entry } from "../entries/types.ts";
 
 type IsIncludedVector = [Area<bigint>, Position3d<bigint>, boolean];
 
@@ -530,7 +530,7 @@ Deno.test("encodeAreaInArea", () => {
   }
 });
 
-Deno.test.only("encodeAreaInArea (streaming)", async () => {
+Deno.test("encodeAreaInArea (streaming)", async () => {
   for (const [inner, outer] of areaInAreaVectors) {
     const encoded = encodeAreaInArea(
       {

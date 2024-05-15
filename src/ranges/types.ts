@@ -1,4 +1,4 @@
-import { Path } from "../paths/types.ts";
+import type { Path } from "../paths/types.ts";
 
 /** Represents an open value for a range ending. */
 export const OPEN_END = Symbol("OPEN_END");

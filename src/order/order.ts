@@ -1,4 +1,4 @@
-import { Path } from "../paths/types.ts";
+import type { Path } from "../paths/types.ts";
 
 /** A total order over bytestrings. */
 export function orderBytes(a: Uint8Array, b: Uint8Array): -1 | 0 | 1 {
