@@ -38,21 +38,21 @@ export function entryPosition<NamespaceKey, SubspaceKey, PayloadDigest>(
  */
 export function encodeEntry<NamespaceKey, SubspaceKey, PayloadDigest>(
   opts: {
-    namespaceScheme: EncodingScheme<NamespaceKey>;
-    subspaceScheme: EncodingScheme<SubspaceKey>;
-    payloadScheme: EncodingScheme<PayloadDigest>;
+    encodeNamespace: (namespace: NamespaceKey) => Uint8Array;
+    encodeSubspace: (subspace: SubspaceKey) => Uint8Array;
+    encodePayload: (digest: PayloadDigest) => Uint8Array;
     pathScheme: PathScheme;
   },
   entry: Entry<NamespaceKey, SubspaceKey, PayloadDigest>,
 ): Uint8Array {
   return concat(
     [
-      opts.namespaceScheme.encode(entry.namespaceId),
-      opts.subspaceScheme.encode(entry.subspaceId),
+      opts.encodeNamespace(entry.namespaceId),
+      opts.encodeSubspace(entry.subspaceId),
       encodePath(opts.pathScheme, entry.path),
       bigintToBytes(entry.timestamp),
       bigintToBytes(entry.payloadLength),
-      opts.payloadScheme.encode(entry.payloadDigest),
+      opts.encodePayload(entry.payloadDigest),
     ],
   );
 }
@@ -124,6 +124,7 @@ function bigIntMin(a: bigint, b: bigint) {
   return b;
 }
 
+/** Encode an {@linkcode Entry} relative to another `Entry`. */
 export function encodeEntryRelativeEntry<
   NamespaceId,
   SubspaceId,
@@ -191,6 +192,7 @@ export function encodeEntryRelativeEntry<
   );
 }
 
+/** Decode an {@linkcode Entry} encoded relative to another `Entry` from {@linkcode GrowingBytes}.  */
 export async function decodeStreamEntryRelativeEntry<
   NamespaceId,
   SubspaceId,
@@ -257,6 +259,7 @@ export async function decodeStreamEntryRelativeEntry<
   };
 }
 
+/** Encode an {@linkcode Entry} relative to an outer {@linkcode Range3d}. */
 export function encodeEntryRelativeRange3d<
   NamespaceId,
   SubspaceId,
@@ -368,6 +371,7 @@ export function encodeEntryRelativeRange3d<
   );
 }
 
+/** Decode an {@linkcode Entry} encoded relative to a {@linkcode Range3d} from {@linkcode GrowingBytes}. */
 export async function decodeStreamEntryRelativeRange3d<
   NamespaceId,
   SubspaceId,
