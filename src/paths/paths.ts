@@ -277,6 +277,10 @@ export function decodePathRelative(
   return prefix.concat(suffix);
 }
 
+/** Decodes a `Path` relative to another `Path` from {@linkcode GrowingBytes}.
+ *
+ * https://willowprotocol.org/specs/encodings/index.html#enc_path_relative
+ */
 export async function decodeStreamPathRelative(
   scheme: PathScheme,
   /** The path which was encoded relative to `reference`. */
@@ -302,6 +306,7 @@ export async function decodeStreamPathRelative(
   return prefix.concat(suffix);
 }
 
+/** Determine the bytelength of a {@linkcode Path} encoded relative to another `Path`. */
 export function encodedPathRelativeLength(
   scheme: PathScheme,
   primary: Path,

@@ -41,7 +41,7 @@ export function orderRangePair<ValueType>(
 
 // Ranges
 
-/* Returns whether the range's end is greater than its start. */
+/** Returns whether the range's end is greater than its start. */
 export function isValidRange<ValueType>(
   order: TotalOrder<ValueType>,
   range: Range<ValueType>,
@@ -159,7 +159,7 @@ export function rangeIsIncluded<ValueType>(
 
 // 3D ranges
 
-/* Returns whether all a 3d range's constituent ranges are valid, i.e. correctly ordered. */
+/** Returns whether all a 3d range's constituent ranges are valid, i.e. correctly ordered. */
 export function isValidRange3d<SubspaceType>(
   orderSubspace: TotalOrder<SubspaceType>,
   range: Range3d<SubspaceType>,
@@ -207,6 +207,10 @@ export function isIncluded3d<SubspaceType>(
   return true;
 }
 
+/** Intersect two {@linkcode Range3d}.
+ *
+ * @returns A new {@linkcode Range3d}, or `null` if there is no intersection.
+ */
 export function intersectRange3d<SubspaceType>(
   orderSubspace: TotalOrder<SubspaceType>,
   a: Range3d<SubspaceType>,
@@ -249,6 +253,7 @@ export function intersectRange3d<SubspaceType>(
   };
 }
 
+/** Compare a possible range value of `ValueType` or {@linkcode OPEN_END} to another for equality. */
 export function isEqualRangeValue<ValueType>(
   order: TotalOrder<ValueType>,
   a: ValueType | typeof OPEN_END,
@@ -278,6 +283,7 @@ function bigIntMin(a: bigint, b: bigint) {
   return b;
 }
 
+/** Encode a {@linkcode Range3d} relative to another `Range3d`. */
 export function encodeRange3dRelative<SubspaceId>(
   opts: {
     orderSubspace: TotalOrder<SubspaceId>;
@@ -612,6 +618,7 @@ export function encodeRange3dRelative<SubspaceId>(
   );
 }
 
+/** Decode an encoded {@linkcode Range3d} relative to another `Range3d`. */
 export function decodeRange3dRelative<SubspaceId>(
   opts: {
     decodeSubspaceId: (encoded: Uint8Array) => SubspaceId;
@@ -872,6 +879,7 @@ export function decodeRange3dRelative<SubspaceId>(
   };
 }
 
+/** Decode an {@linkcode Range3d} relative to another `Range3d` from {@linkcode GrowingBytes}. */
 export async function decodeStreamRange3dRelative<SubspaceId>(
   opts: {
     decodeStreamSubspaceId: (bytes: GrowingBytes) => Promise<SubspaceId>;

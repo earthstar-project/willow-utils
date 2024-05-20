@@ -63,9 +63,9 @@ const entries: Entry<Uint8Array, Uint8Array, ArrayBuffer>[] = [
 Deno.test("Encoding", () => {
   for (const entry of entries) {
     const encoded = encodeEntry({
-      namespaceScheme: testSchemeNamespace,
-      subspaceScheme: testSchemeSubspace,
-      payloadScheme: testSchemePayload,
+      encodeNamespace: testSchemeNamespace.encode,
+      encodeSubspace: testSchemeSubspace.encode,
+      encodePayload: testSchemePayload.encode,
       pathScheme: {
         maxComponentCount: 255,
         maxComponentLength: 255,

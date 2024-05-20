@@ -1,9 +1,11 @@
 import type { GrowingBytes } from "./growing_bytes.ts";
 
+/** A decoder for decoding values of `ValueType` from a {@linkcode GrowingBytes} */
 export type StreamDecoder<ValueType> = (
   value: GrowingBytes,
 ) => Promise<ValueType>;
 
+/** A scheme for encoding and decoding values of `ValueType`. */
 export type EncodingScheme<ValueType> = {
   encode: (value: ValueType) => Uint8Array;
   decode: (encoded: Uint8Array) => ValueType;

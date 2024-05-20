@@ -9,6 +9,7 @@ export class GrowingBytes {
     | [number, PromiseWithResolvers<Uint8Array>]
     | null = null;
 
+  /** Create a new {@linkcode GrowingBytes} from a stream of bytes. */
   constructor(incoming: AsyncIterable<Uint8Array>) {
     (async () => {
       for await (const chunk of incoming) {

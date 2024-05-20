@@ -17,16 +17,12 @@ Currently used by
 
 ## Usage
 
+This module is available JSR. Please see the
+[@earthstar/willow-utils](https://jsr.io/@earthstar/willow-utils/score) page for
+installation instructions.
+
 Complete API documentation can be found
-[here](https://deno.land/x/willow_utils/mod.ts).
-
-With ESM imports:
-
-```
-import * as WillowUtils from "https://deno.land/x/willow_utils/mod.ts"
-```
-
-NPM distribution coming very soon.
+[here](https://jsr.io/@earthstar/willow-utils/doc).
 
 ## Development
 

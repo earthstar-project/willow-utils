@@ -1,3 +1,4 @@
+/** Encode a {@linkcode BigInt}. */
 export function bigintToBytes(bigint: bigint): Uint8Array {
   const bytes = new Uint8Array(8);
   const view = new DataView(bytes.buffer, bytes.byteOffset);

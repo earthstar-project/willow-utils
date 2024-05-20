@@ -479,6 +479,7 @@ const compactWidthEndMasks: Record<1 | 2 | 4 | 8, number> = {
   8: 0x3,
 };
 
+/** Decode an {@linkcode Area} encoded relative to an outer `Area` from a {@linkcode GrowingBytes}.  */
 export async function decodeStreamAreaInArea<SubspaceId>(
   opts: {
     pathScheme: PathScheme;
@@ -573,6 +574,7 @@ export async function decodeStreamAreaInArea<SubspaceId>(
   };
 }
 
+/** Encode an {@linkcode Entry} relative to an {@linkcode Area}. */
 export function encodeEntryInNamespaceArea<
   NamespaceId,
   SubspaceId,
@@ -649,6 +651,7 @@ export function encodeEntryInNamespaceArea<
   );
 }
 
+/** Decode an Entry relative to a namespace area from {@linkcode GrowingBytes}. */
 export async function decodeStreamEntryInNamespaceArea<
   NamespaceId,
   SubspaceId,
