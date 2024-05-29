@@ -1,17 +1,21 @@
 import { concat } from "@std/bytes";
 
-/** An array of growing bytes which can be awaited upon and pruned. */
+/** A bytestring which, upon request, pulls bytes from an asynchronous source of bytes. */
 export class GrowingBytes {
   /** All received bytes. */
   array: Uint8Array = new Uint8Array();
+
+  private hasUnfulfilledRequests = Promise.withResolvers<void>();
 
   private deferredUntilLength:
     | [number, PromiseWithResolvers<Uint8Array>]
     | null = null;
 
   /** Create a new {@linkcode GrowingBytes} from a stream of bytes. */
-  constructor(incoming: AsyncIterable<Uint8Array>) {
+  constructor(readonly incoming: AsyncIterable<Uint8Array>) {
     (async () => {
+      await this.hasUnfulfilledRequests.promise;
+
       for await (const chunk of incoming) {
         this.array = concat([this.array, chunk]);
 
@@ -21,43 +25,46 @@ export class GrowingBytes {
         ) {
           this.deferredUntilLength[1].resolve(this.array);
           this.deferredUntilLength = null;
+          this.hasUnfulfilledRequests = Promise.withResolvers<void>();
         }
+
+        await this.hasUnfulfilledRequests.promise;
       }
     })();
   }
 
-  /** Wait for the underyling Uint8Array to grow relative to the given length, regardless of the current length. */
+  /** Attempt to pull bytes from the underlying source until the accumulated bytestring has grown by the given amount of bytes.
+   *
+   * @param length - The number of bytes to pull from the underlying source until returning.
+   * @returns The accumulated bytestring after having pulled the given number of bytes.
+   */
   nextRelative(length: number): Promise<Uint8Array> {
-    return this.next(length, true);
+    const target = this.array.byteLength + length;
+    return this.nextAbsolute(target);
   }
 
-  /** Wait for the underyling Uint8Array to grow to at least the absolute given length. */
+  /** Attempt to pull bytes from the underlying source until the accumulated bytestring has grown to the given size.
+   *
+   * @param length - The size the accumulated bytestring must have reached before returning.
+   * @returns The accumulated bytestring after having reached the given bytelength.
+   */
   nextAbsolute(length: number): Promise<Uint8Array> {
     if (this.array.byteLength >= length) {
       return Promise.resolve(this.array);
     }
 
-    return this.next(length, false);
-  }
+    this.hasUnfulfilledRequests.resolve();
 
-  private next(ofLength: number, relative: boolean): Promise<Uint8Array> {
-    const target = relative ? this.array.byteLength + ofLength : ofLength;
-
-    if (
-      this.deferredUntilLength &&
-      this.deferredUntilLength[0] === target
-    ) {
+    if (this.deferredUntilLength && this.deferredUntilLength[0] === length) {
       return this.deferredUntilLength[1].promise;
     }
 
-    const promiseWithResolvers = Promise.withResolvers<Uint8Array>();
-
     this.deferredUntilLength = [
-      target,
-      promiseWithResolvers,
+      length,
+      Promise.withResolvers<Uint8Array>(),
     ];
 
-    return promiseWithResolvers.promise;
+    return this.deferredUntilLength[1].promise;
   }
 
   /** Prunes the array by the given bytelength. */
