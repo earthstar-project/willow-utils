@@ -10,6 +10,5 @@
   "tasks": {
     "test": "deno test src",
     "test-watch": "deno test src --watch"
-  },
-  "lock": false
+  }
 }
