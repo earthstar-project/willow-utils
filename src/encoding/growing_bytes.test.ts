@@ -12,41 +12,26 @@ Deno.test("GrowingBytes (relative)", async () => {
 
   fifo.push(new Uint8Array([0]));
 
-  await delay(0);
-
-  assertEquals(bytes.array, new Uint8Array([0]));
+  assertEquals(bytes.array, new Uint8Array());
 
   fifo.push(new Uint8Array([1]));
   fifo.push(new Uint8Array([2, 3]));
 
-  await delay(0);
+  assertEquals(bytes.array, new Uint8Array());
+
+  const receivedBytes = await bytes.nextRelative(4);
+
+  assertEquals(receivedBytes, new Uint8Array([0, 1, 2, 3]));
+
+  const lastPromise = bytes.nextRelative(2);
 
   assertEquals(bytes.array, new Uint8Array([0, 1, 2, 3]));
 
-  let received = new Uint8Array();
+  fifo.push(new Uint8Array([4, 5]));
 
-  bytes.nextRelative(4).then((bytes) => {
-    received = bytes;
-  });
-
-  fifo.push(new Uint8Array([4]));
   await delay(0);
 
-  assertEquals(received, new Uint8Array());
-
-  fifo.push(new Uint8Array([5, 6]));
-  await delay(0);
-
-  assertEquals(received, new Uint8Array());
-
-  fifo.push(new Uint8Array([7]));
-  await delay(0);
-
-  assertEquals(received, new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
-
-  bytes.prune(4);
-
-  assertEquals(bytes.array, new Uint8Array([4, 5, 6, 7]));
+  assertEquals(await lastPromise, new Uint8Array([0, 1, 2, 3, 4, 5]));
 });
 
 Deno.test("GrowingBytes (absolute)", async () => {
@@ -60,37 +45,35 @@ Deno.test("GrowingBytes (absolute)", async () => {
 
   await delay(0);
 
-  assertEquals(bytes.array, new Uint8Array([0]));
+  assertEquals(bytes.array, new Uint8Array());
 
   fifo.push(new Uint8Array([1]));
   fifo.push(new Uint8Array([2, 3]));
 
   await delay(0);
 
-  assertEquals(bytes.array, new Uint8Array([0, 1, 2, 3]));
+  assertEquals(bytes.array, new Uint8Array());
 
-  let received = new Uint8Array();
+  const receivedBytes = await bytes.nextAbsolute(4);
 
-  bytes.nextAbsolute(8).then((bytes) => {
-    received = bytes;
-  });
-
-  fifo.push(new Uint8Array([4]));
-  await delay(0);
-
-  assertEquals(received, new Uint8Array());
-
-  fifo.push(new Uint8Array([5, 6]));
-  await delay(0);
-
-  assertEquals(received, new Uint8Array());
-
-  fifo.push(new Uint8Array([7]));
-  await delay(0);
-
-  assertEquals(received, new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
+  assertEquals(receivedBytes, new Uint8Array([0, 1, 2, 3]));
 
   bytes.prune(4);
 
-  assertEquals(bytes.array, new Uint8Array([4, 5, 6, 7]));
+  fifo.push(new Uint8Array([4]));
+  fifo.push(new Uint8Array([5, 6]));
+
+  assertEquals(bytes.array, new Uint8Array());
+
+  const lastPromise = bytes.nextAbsolute(4);
+
+  await delay(0);
+
+  assertEquals(bytes.array, new Uint8Array([4, 5, 6]));
+
+  fifo.push(new Uint8Array([7]));
+
+  await delay(0);
+
+  assertEquals(await lastPromise, new Uint8Array([4, 5, 6, 7]));
 });
