@@ -298,3 +298,90 @@ Deno.test("relative decode (streaming)", async () => {
     );
   }
 });
+
+Deno.test("relative streaming decode (failing case #1)", async () => {
+  const reference = [
+    new Uint8Array([115, 111, 99, 105, 97, 108]),
+    new Uint8Array([102, 101, 101, 100]),
+    new Uint8Array([112, 117, 98, 108, 105, 99]),
+    new Uint8Array([
+      49,
+      55,
+      49,
+      55,
+      53,
+      56,
+      55,
+      52,
+      49,
+      52,
+      55,
+      56,
+      48,
+      46,
+      121,
+      97,
+      109,
+      108,
+    ]),
+  ];
+
+  const primary = [
+    new Uint8Array([115, 111, 99, 105, 97, 108]),
+    new Uint8Array([102, 101, 101, 100]),
+    new Uint8Array([112, 117, 98, 108, 105, 99]),
+    new Uint8Array([
+      49,
+      55,
+      49,
+      55,
+      53,
+      56,
+      55,
+      53,
+      57,
+      48,
+      49,
+      54,
+      55,
+      46,
+      121,
+      97,
+      109,
+      108,
+    ]),
+  ];
+
+  const encoded = encodePathRelative(
+    {
+      maxPathLength: 1024,
+      maxComponentCount: 16,
+      maxComponentLength: 64,
+    },
+    primary,
+    reference,
+  );
+
+  const stream = new FIFO<Uint8Array>();
+
+  const bytes = new GrowingBytes(stream);
+
+  (async () => {
+    for (const byte of encoded) {
+      await delay(0);
+      stream.push(new Uint8Array([byte]));
+    }
+  })();
+
+  const decodedFromStream = await decodeStreamPathRelative(
+    {
+      maxPathLength: 1024,
+      maxComponentCount: 16,
+      maxComponentLength: 64,
+    },
+    bytes,
+    reference,
+  );
+
+  assertEquals(decodedFromStream, primary);
+});

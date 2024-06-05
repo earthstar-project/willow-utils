@@ -294,7 +294,7 @@ export async function decodeStreamPathRelative(
 
   const prefixLength = decodeUintMax32(
     bytes.array.subarray(0, prefixLengthWidth),
-    scheme.maxPathLength,
+    scheme.maxComponentCount,
   );
 
   const prefix = reference.slice(0, prefixLength);
