@@ -2,13 +2,13 @@ import type { PathScheme } from "../parameters/types.ts";
 import { isValidPath } from "../paths/paths.ts";
 import type { Path } from "../paths/types.ts";
 
-/** Returns the successor to a path given a `Path` and `PathScheme`.  */
+/** Return the least path which is greater than `path`, or return `null` if `path` is the greatest possible path.  */
 export function successorPath(
   path: Path,
   { maxComponentCount, maxComponentLength, maxPathLength }: PathScheme,
 ): Path | null {
   if (path.length === 0) {
-    const nextPath = [new Uint8Array(1)];
+    const nextPath = [new Uint8Array()];
 
     const isSimplestOptionValid = isValidPath(
       nextPath,
@@ -22,17 +22,26 @@ export function successorPath(
     return null;
   }
 
-  const workingPath = [...path];
+  // Try add an empty component
+  const nextPath = [...path, new Uint8Array()];
+
+  const isSimplestOptionValid = isValidPath(
+    nextPath,
+    { maxComponentCount, maxComponentLength, maxPathLength },
+  );
+
+  if (isSimplestOptionValid) {
+    return nextPath;
+  }
 
   for (let i = path.length - 1; i >= 0; i--) {
     // Does the simplest thing work?
 
-    const component = workingPath[i];
+    const component = path[i];
 
     const simplestNextComponent = new Uint8Array([...component, 0]);
 
-    const simplestNextPath = [...path];
-    simplestNextPath[i] = simplestNextComponent;
+    const simplestNextPath = [...path.slice(0, i), simplestNextComponent];
 
     const isSimplestOptionValid = isValidPath(
       simplestNextPath,
@@ -48,65 +57,63 @@ export function successorPath(
     const incrementedComponent = successorBytesFixedWidth(component);
 
     if (incrementedComponent) {
-      const nextPath = [...path.slice(0, i)];
-      nextPath[i] = incrementedComponent;
+      const nextPath = [...path.slice(0, i), incrementedComponent];
 
       return nextPath;
     }
-
-    // Otherwise (there was an overflow)...
-
-    workingPath.pop();
   }
 
-  if (workingPath.length === 0) {
-    return null;
-  }
-
-  return workingPath;
+  return null;
 }
 
-/** Return a successor to a prefix, that is, the next element that is not a prefix of the given path. */
+/** Return the least path that is greater than `path` and which is not prefixed by `path`, or `null` if `path` is the empty path *or* if `path` is the greatest path. */
 export function successorPrefix(
   path: Path,
+  { maxComponentCount, maxComponentLength, maxPathLength }: PathScheme,
 ): Path | null {
-  if (path.length === 0) {
-    return null;
-  }
-
-  const workingPath = [...path];
-
   for (let i = path.length - 1; i >= 0; i--) {
-    // Does the simplest thing work?
+    const component = path[i];
 
-    const component = workingPath[i];
+    const simplestNextComponent = new Uint8Array([...component, 0]);
 
-    const incrementedComponent = successorBytesFixedWidth(component);
+    const simplestNextPath = [...path.slice(0, i), simplestNextComponent];
 
-    if (incrementedComponent) {
-      const nextPath = [...path.slice(0, i)];
-      nextPath[i] = incrementedComponent;
+    const isSimplestOptionValid = isValidPath(
+      simplestNextPath,
+      { maxComponentCount, maxComponentLength, maxPathLength },
+    );
 
-      return nextPath;
+    if (isSimplestOptionValid) {
+      return simplestNextPath;
     }
 
-    // Otherwise (there was an overflow)...
+    // prefix_successor
 
-    if (component.byteLength === 0) {
-      const nextPath = [...path.slice(0, i)];
-      nextPath[i] = new Uint8Array([0]);
+    for (let ci = component.length - 1; ci >= 0; ci--) {
+      const byte = component[ci];
 
-      return nextPath;
+      if (byte !== 255) {
+        const newComponent = new Uint8Array([
+          ...component.slice(0, ci),
+          byte + 1,
+        ]);
+
+        const newPath = [...path.slice(0, i), newComponent];
+
+        if (
+          isValidPath(newPath, {
+            maxComponentCount,
+            maxComponentLength,
+            maxPathLength,
+          })
+        ) {
+          return newPath;
+        }
+      }
     }
-
-    workingPath.pop();
   }
 
-  if (workingPath.length === 0) {
-    return null;
-  }
-
-  return workingPath;
+  return null;
 }
 
 /** Return the succeeding bytestring of the given bytestring without increasing that bytestring's length.  */
