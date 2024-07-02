@@ -2,137 +2,144 @@ import type { PathScheme } from "../parameters/types.ts";
 import { isValidPath } from "../paths/paths.ts";
 import type { Path } from "../paths/types.ts";
 
-/** Returns the successor to a path given a `Path` and `PathScheme`.  */
+/** Return the least path which is greater than `path`, or return `null` if `path` is the greatest possible path.  */
 export function successorPath(
-  path: Path,
-  { maxComponentCount, maxComponentLength, maxPathLength }: PathScheme,
+	path: Path,
+	{ maxComponentCount, maxComponentLength, maxPathLength }: PathScheme,
 ): Path | null {
-  if (path.length === 0) {
-    const nextPath = [new Uint8Array(1)];
+	if (path.length === 0) {
+		const nextPath = [new Uint8Array()];
 
-    const isSimplestOptionValid = isValidPath(
-      nextPath,
-      { maxComponentCount, maxComponentLength, maxPathLength },
-    );
+		const isSimplestOptionValid = isValidPath(
+			nextPath,
+			{ maxComponentCount, maxComponentLength, maxPathLength },
+		);
 
-    if (isSimplestOptionValid) {
-      return nextPath;
-    }
+		if (isSimplestOptionValid) {
+			return nextPath;
+		}
 
-    return null;
-  }
+		return null;
+	}
 
-  const workingPath = [...path];
+	// Try add an empty component
+	const nextPath = [...path, new Uint8Array()];
 
-  for (let i = path.length - 1; i >= 0; i--) {
-    // Does the simplest thing work?
+	const isSimplestOptionValid = isValidPath(
+		nextPath,
+		{ maxComponentCount, maxComponentLength, maxPathLength },
+	);
 
-    const component = workingPath[i];
+	if (isSimplestOptionValid) {
+		return nextPath;
+	}
 
-    const simplestNextComponent = new Uint8Array([...component, 0]);
+	for (let i = path.length - 1; i >= 0; i--) {
+		// Does the simplest thing work?
 
-    const simplestNextPath = [...path];
-    simplestNextPath[i] = simplestNextComponent;
+		const component = path[i];
 
-    const isSimplestOptionValid = isValidPath(
-      simplestNextPath,
-      { maxComponentCount, maxComponentLength, maxPathLength },
-    );
+		const simplestNextComponent = new Uint8Array([...component, 0]);
 
-    if (isSimplestOptionValid) {
-      return simplestNextPath;
-    }
+		const simplestNextPath = [...path.slice(0, i), simplestNextComponent];
 
-    // Otherwise...
+		const isSimplestOptionValid = isValidPath(
+			simplestNextPath,
+			{ maxComponentCount, maxComponentLength, maxPathLength },
+		);
 
-    const incrementedComponent = successorBytesFixedWidth(component);
+		if (isSimplestOptionValid) {
+			return simplestNextPath;
+		}
 
-    if (incrementedComponent) {
-      const nextPath = [...path.slice(0, i)];
-      nextPath[i] = incrementedComponent;
+		// Otherwise...
 
-      return nextPath;
-    }
+		const incrementedComponent = successorBytesFixedWidth(component);
 
-    // Otherwise (there was an overflow)...
+		if (incrementedComponent) {
+			const nextPath = [...path.slice(0, i), incrementedComponent];
 
-    workingPath.pop();
-  }
+			return nextPath;
+		}
+	}
 
-  if (workingPath.length === 0) {
-    return null;
-  }
-
-  return workingPath;
+	return null;
 }
 
-/** Return a successor to a prefix, that is, the next element that is not a prefix of the given path. */
+/** Return the least path that is greater than `path` and which is not prefixed by `path`, or `null` if `path` is the empty path *or* if `path` is the greatest path. */
 export function successorPrefix(
-  path: Path,
+	path: Path,
+	{ maxComponentCount, maxComponentLength, maxPathLength }: PathScheme,
 ): Path | null {
-  if (path.length === 0) {
-    return null;
-  }
+	for (let i = path.length - 1; i >= 0; i--) {
+		const component = path[i];
 
-  const workingPath = [...path];
+		const simplestNextComponent = new Uint8Array([...component, 0]);
 
-  for (let i = path.length - 1; i >= 0; i--) {
-    // Does the simplest thing work?
+		const simplestNextPath = [...path.slice(0, i), simplestNextComponent];
 
-    const component = workingPath[i];
+		const isSimplestOptionValid = isValidPath(
+			simplestNextPath,
+			{ maxComponentCount, maxComponentLength, maxPathLength },
+		);
 
-    const incrementedComponent = successorBytesFixedWidth(component);
+		if (isSimplestOptionValid) {
+			return simplestNextPath;
+		}
 
-    if (incrementedComponent) {
-      const nextPath = [...path.slice(0, i)];
-      nextPath[i] = incrementedComponent;
+		// prefix_successor
 
-      return nextPath;
-    }
+		for (let ci = component.length - 1; ci >= 0; ci--) {
+			const byte = component[ci];
 
-    // Otherwise (there was an overflow)...
+			if (byte !== 255) {
+				const newComponent = new Uint8Array([
+					...component.slice(0, ci),
+					byte + 1,
+				]);
 
-    if (component.byteLength === 0) {
-      const nextPath = [...path.slice(0, i)];
-      nextPath[i] = new Uint8Array([0]);
+				const newPath = [...path.slice(0, i), newComponent];
 
-      return nextPath;
-    }
+				if (
+					isValidPath(newPath, {
+						maxComponentCount,
+						maxComponentLength,
+						maxPathLength,
+					})
+				) {
+					return newPath;
+				}
+			}
+		}
+	}
 
-    workingPath.pop();
-  }
-
-  if (workingPath.length === 0) {
-    return null;
-  }
-
-  return workingPath;
+	return null;
 }
 
 /** Return the succeeding bytestring of the given bytestring without increasing that bytestring's length.  */
 export function successorBytesFixedWidth(bytes: Uint8Array): Uint8Array | null {
-  const newBytes = new Uint8Array(bytes);
+	const newBytes = new Uint8Array(bytes);
 
-  let didIncrement = false;
+	let didIncrement = false;
 
-  for (let i = newBytes.byteLength - 1; i >= 0; i--) {
-    const byte = bytes[i];
+	for (let i = newBytes.byteLength - 1; i >= 0; i--) {
+		const byte = bytes[i];
 
-    if (byte >= 255) {
-      newBytes.set([0], i);
-      continue;
-    }
+		if (byte >= 255) {
+			newBytes.set([0], i);
+			continue;
+		}
 
-    if (!didIncrement) {
-      newBytes.set([byte + 1], i);
-      didIncrement = true;
-      break;
-    }
-  }
+		if (!didIncrement) {
+			newBytes.set([byte + 1], i);
+			didIncrement = true;
+			break;
+		}
+	}
 
-  if (!didIncrement) {
-    return null;
-  }
+	if (!didIncrement) {
+		return null;
+	}
 
-  return newBytes;
+	return newBytes;
 }
