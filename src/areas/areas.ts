@@ -194,6 +194,11 @@ export function areaTo3dRange<SubspaceType>(
       start: area.pathPrefix,
       end: successorPrefix(
         area.pathPrefix,
+        {
+          maxComponentCount: opts.maxComponentCount,
+          maxComponentLength: opts.maxPathComponentLength,
+          maxPathLength: opts.maxPathLength,
+        },
       ) || OPEN_END,
     },
   };

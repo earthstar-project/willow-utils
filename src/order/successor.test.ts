@@ -11,34 +11,44 @@ const maxComponentLength = 2;
 const testVectorsSuccessorPath: VectorSuccessorPath[] = [
   [
     [],
-    [new Uint8Array(1)],
+    [new Uint8Array([])],
   ],
   [
     [new Uint8Array([0])],
-    [new Uint8Array([0, 0])],
+    [new Uint8Array([0]), new Uint8Array([])],
   ],
+
   [
     [new Uint8Array([0, 0])],
-    [new Uint8Array([0, 1])],
+    [new Uint8Array([0, 0]), new Uint8Array([])],
   ],
+
   [
     [new Uint8Array([0, 0]), new Uint8Array([0])],
+    [new Uint8Array([0, 0]), new Uint8Array([0]), new Uint8Array()],
+  ],
+
+  [
+    [new Uint8Array([0, 0]), new Uint8Array([0]), new Uint8Array()],
     [new Uint8Array([0, 0]), new Uint8Array([1])],
   ],
+
   [
-    [new Uint8Array([0, 0]), new Uint8Array([255])],
+    [new Uint8Array([0, 0]), new Uint8Array([255]), new Uint8Array([])],
     [new Uint8Array([0, 1])],
   ],
+
   [
-    [new Uint8Array([0, 255]), new Uint8Array([0])],
+    [new Uint8Array([0, 255]), new Uint8Array([0]), new Uint8Array()],
     [new Uint8Array([0, 255]), new Uint8Array([1])],
   ],
   [
     [new Uint8Array([0]), new Uint8Array([0]), new Uint8Array([0])],
     [new Uint8Array([0]), new Uint8Array([0]), new Uint8Array([1])],
   ],
+
   [
-    [new Uint8Array([255]), new Uint8Array([255]), new Uint8Array([255])],
+    [new Uint8Array([255, 255]), new Uint8Array([255]), new Uint8Array([])],
     null,
   ],
 ];
@@ -68,45 +78,54 @@ const testVectorsSuccessorPrefix: VectorSuccessorPrefix[] = [
     [],
     null,
   ],
+
   [
     [new Uint8Array()],
     [new Uint8Array([0])],
   ],
+
   [
     [new Uint8Array([1]), new Uint8Array([])],
     [new Uint8Array([1]), new Uint8Array([0])],
   ],
+
   [
     [new Uint8Array([0])],
-    [new Uint8Array([1])],
+    [new Uint8Array([0, 0])],
   ],
+
   [
     [new Uint8Array([0, 0])],
     [new Uint8Array([0, 1])],
   ],
+
   [
     [new Uint8Array([0, 0]), new Uint8Array([0])],
     [new Uint8Array([0, 0]), new Uint8Array([1])],
   ],
+
   [
     [new Uint8Array([0, 0]), new Uint8Array([255])],
     [new Uint8Array([0, 1])],
   ],
+
   [
     [new Uint8Array([0, 255]), new Uint8Array([0])],
     [new Uint8Array([0, 255]), new Uint8Array([1])],
   ],
+
   [
     [new Uint8Array([0]), new Uint8Array([0]), new Uint8Array([0])],
     [new Uint8Array([0]), new Uint8Array([0]), new Uint8Array([1])],
   ],
+
   [
-    [new Uint8Array([255]), new Uint8Array([255]), new Uint8Array([255])],
+    [new Uint8Array([255, 255]), new Uint8Array([255])],
     null,
   ],
 ];
 
-Deno.test("successorPrefix", () => {
+Deno.test.only("successorPrefix", () => {
   for (const [original, successor] of testVectorsSuccessorPrefix) {
     if (successor) {
       assert(
@@ -117,6 +136,7 @@ Deno.test("successorPrefix", () => {
     assertEquals(
       successorPrefix(
         original,
+        { maxComponentCount, maxComponentLength, maxPathLength },
       ),
       successor,
     );
