@@ -82,7 +82,7 @@ export function compactWidth(num: number | bigint): 1 | 2 | 4 | 8 {
     return 1;
   } else if (num < 65536) {
     return 2;
-  } else if (num < 2147483648) {
+  } else if (num < 4294967296) {
     return 4;
   }
 
